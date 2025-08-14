@@ -1,11 +1,11 @@
-include {fromAspera} from 'plugin/nf-aspera'
+include { withAspera } from 'plugin/nf-aspera'
 
 
-    Channel.fromAspera([
+    Channel.withAspera([
         client: 'asperasoft',
         destination:'downloads/',
         sources:[
             'aspera-test-dir-large/100MB',
-	]
+	    ]
     ])
     | view

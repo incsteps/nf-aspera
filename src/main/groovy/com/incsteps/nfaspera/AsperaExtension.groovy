@@ -30,7 +30,7 @@ class AsperaExtension extends PluginExtensionPoint{
     }
 
     @Factory
-    DataflowWriteChannel fromAspera(Map params=[:]) {
+    DataflowWriteChannel withAspera(Map params=[:]) {
         final target = CH.create()
         session.addIgniter((action) -> downloadFile(target, params))
         return target

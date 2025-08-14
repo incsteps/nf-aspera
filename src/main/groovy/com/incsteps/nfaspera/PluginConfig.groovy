@@ -29,7 +29,7 @@ class PluginConfig {
     AsperaClient getClient(String id){
         if( clients.containsKey(id))
             return clients.get(id)
-        clients.entrySet().first().value
+        clients.entrySet().first()?.value
     }
 
     String getTransferdPath(){

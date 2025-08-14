@@ -1,4 +1,4 @@
-include {fromAspera} from 'plugin/nf-aspera'
+include {withAspera} from 'plugin/nf-aspera'
 
 
 process DECOMPRESS_GZ {
@@ -60,7 +60,7 @@ process VALIDATE_FASTA {
 
 
 workflow{
-    Channel.fromAspera([
+    Channel.withAspera([
         client: 'ncbi',
         destination:'downloads/',
         sources:[

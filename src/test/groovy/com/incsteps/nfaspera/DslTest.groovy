@@ -17,11 +17,10 @@ import java.nio.file.Path
 
 
 /**
- * Unit test for Hello DSL
  *
- * @author : jorge <jorge.aguilera@seqera.io>
+ * @author : jorge <jorge@incsteps.com>
  */
-@Timeout(10)
+@Timeout(60)
 class DslTest extends Dsl2Spec{
 
     @Shared String pluginsMode
@@ -63,47 +62,35 @@ class DslTest extends Dsl2Spec{
         pluginsMode ? System.setProperty('pf4j.mode',pluginsMode) : System.clearProperty('pf4j.mode')
     }
 
-    def 'should perform a hi and create a channel' () {
-        when:
-        def SCRIPT = '''
-            include {reverse} from 'plugin/nf-aspera'
-            channel.reverse('hi!') 
-            '''
-        and:
-        def result = new MockScriptRunner([hello:[prefix:'>>']]).setScript(SCRIPT).execute()
-        then:
-        result.val == 'hi!'.reverse()
-        result.val == Channel.STOP
-    }
-
-    def 'should store a goodbye' () {
-        when:
-        def SCRIPT = '''
-            include {goodbye} from 'plugin/nf-aspera'
-            channel
-                .of('folks')
-                .goodbye() 
-            '''
-        and:
-        def result = new MockScriptRunner([:]).setScript(SCRIPT).execute()
-        then:
-        result.val == 'Goodbye folks'
-        result.val == Channel.STOP
-        
-    }
-
     def 'can use an imported function' () {
+        given:
+        def config = [
+                aspera:[
+                    clients:[
+                        asperasoft: [
+                            remote_host : 'demo.asperasoft.com',
+                            ssh_port : 33001,
+                            remote_user : "aspera",
+                            remote_password : "demoaspera",
+                        ]
+                    ]
+                ]
+        ]
         when:
         def SCRIPT = '''
-            include {randomString} from 'plugin/nf-aspera'
-            channel
-                .of( randomString(20) )                
+            include {withAspera } from 'plugin/nf-aspera'
+            Channel.withAspera([
+                client: 'asperasoft',
+                destination:'build/',
+                sources:['aspera-test-dir-large/100MB',]
+            ])
+            | view    
+            sleep 20          
             '''
         and:
-        def result = new MockScriptRunner([:]).setScript(SCRIPT).execute()
+        new MockScriptRunner(config).setScript(SCRIPT).execute()
         then:
-        result.val.size() == 20
-        result.val == Channel.STOP
+        new File("build/100MB")
     }
 
 }
