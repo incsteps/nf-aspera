@@ -1,0 +1,93 @@
+plugins {
+    id "idea"
+    id 'org.asciidoctor.jvm.convert'
+    id 'io.nextflow.nextflow-plugin'
+    id 'com.google.protobuf' version '0.9.4'
+}
+
+group project.findProperty('group')
+
+repositories {
+    mavenCentral()
+}
+
+configurations {
+    // see https://docs.gradle.org/4.1/userguide/dependency_management.html#sub:exclude_transitive_dependencies
+    runtimeClasspath.exclude group: 'org.slf4j', module: 'slf4j-api'
+}
+
+dependencies {
+    implementation "io.grpc:grpc-netty-shaded:${grpcVersion}"
+    implementation "io.grpc:grpc-protobuf:${grpcVersion}"
+    implementation "io.grpc:grpc-stub:${grpcVersion}"
+    implementation "com.google.protobuf:protobuf-java:${protobufVersion}"
+    compileOnly 'org.apache.tomcat:annotations-api:6.0.53'
+}
+
+
+asciidoctor{
+
+  resources {
+    from('src/docs/asciidoc/images') {
+      include '**/*.png'
+    }
+
+    into './images'
+  }
+}
+
+nextflowPlugin {
+    // minimum nextflow version
+    nextflowVersion = project.findProperty('nextflow_version')
+
+    provider = project.findProperty('provider')
+    className = project.findProperty('classname')
+    extensionPoints = [
+            'com.incsteps.nfaspera.TransferdFactory',
+            'com.incsteps.nfaspera.AsperaExtension',
+    ]
+
+    publishing {
+        github {
+            repository = project.findProperty('github_repository')
+            userName = project.findProperty('github_username')
+            authToken = project.findProperty('github_access_token')
+            email = project.findProperty('github_commit_email')
+
+            indexUrl = 'https://github.com/nextflow-io/plugins/main/plugins.json'
+        }
+    }
+}
+
+protobuf {
+    protoc {
+        artifact = "com.google.protobuf:protoc:${protobufVersion}"
+    }
+    plugins {
+        grpc {
+            artifact = "io.grpc:protoc-gen-grpc-java:${grpcVersion}"
+        }
+    }
+    generateProtoTasks {
+        all().each { task ->
+            task.plugins {
+                grpc {}
+            }
+        }
+    }
+}
+
+afterEvaluate { tasks.findByName("clean").doLast {
+    delete protobuf.generatedFilesBaseDir
+}}
+
+
+sourceSets {
+    main {
+        proto {
+            srcDir 'src/main/protobuf'
+            include '**/*.proto'
+        }
+    }
+}
+

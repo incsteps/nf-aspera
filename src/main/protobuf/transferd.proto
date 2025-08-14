@@ -1,0 +1,1770 @@
+syntax = "proto3";
+
+package transferd.api;
+
+option go_package = "ibm.com/aspera/transferd/api";
+
+// option for Java
+option java_package = "com.ibm.software.aspera.transferd.api";
+//option java_outer_classname = "TransferService"; // Default is TransferService
+//option java_multiple_files = true;
+
+/*
+ * Transfer service definition. This service enables users to start, manage and monitor transfers.
+ * You can also  get information about the transfer service settings and confirm the availability of
+ * communication between the engine and a remote transfer server.
+ */
+service TransferService {
+    /*
+     * Validate accepts a transfer spec string and a transfer type, and returns the validation result.
+     */
+    rpc Validate (ValidationRequest) returns (ValidationResponse) {
+    }
+    /*
+     * StartTransfer starts a new transfer and returns the transfer information required to manage and monitor the transfer.
+     * This request doesn't close until the transfer is terminated or the request is canceled by the client.
+     */
+    rpc StartTransfer (TransferRequest) returns (StartTransferResponse) {
+    }
+    /*
+     * StartTransferWithMonitor starts a new transfer and streams back the transfer events.
+     * The request doesn't return immediately, as it continues streaming responses to the client until the transfer is terminated or the request is canceled
+     * by the client.
+     */
+    rpc StartTransferWithMonitor (TransferRequest) returns (stream TransferResponse) {
+    }
+    /*
+     * QueryTransfer requests transfer data.
+     */
+    rpc QueryTransfer (TransferInfoRequest) returns (QueryTransferResponse) {
+    }
+    /*
+     * ModifyTransfer modifies an existing transfer.
+     */
+    rpc ModifyTransfer (TransferModificationRequest) returns (TransferModificationResponse) {
+    }
+    /*
+     * AddTransferPaths can be used with persistent transfer to add paths to an existing transfer.
+     * (type TransferType.FILE_PERSISTENT).
+     */
+    rpc AddTransferPaths (TransferPathRequest) returns (TransferPathResponse) {
+    }
+    /*
+     * LockPersistentTransfer, used with persistent transfer, marks an existing persistent transfer as done.
+     * Once the method is called, any subsequent call to AddTransferPaths results in an error.
+     * (type TransferType.FILE_PERSISTENT).
+     */
+    rpc LockPersistentTransfer (LockPersistentTransferRequest) returns (LockPersistentTransferResponse) {
+    }
+    /*
+     * StopTransfer stops a transfer.
+     */
+    rpc StopTransfer (StopTransferRequest) returns (StopTransferResponse) {
+    }
+    /*
+     * MonitorTransfers monitors transfers matching the defined filters and streams back the transfer events.
+     * The request doesn't return an immediate response because MonitorTransfers continues streaming
+     * responses to the client until the client cancels the request.
+     */
+    rpc MonitorTransfers (RegistrationRequest) returns (stream TransferResponse) {
+    }
+    /*
+     * GetAPIVersion gets the API version.
+     */
+    rpc GetAPIVersion (APIVersionRequest) returns (APIVersionResponse) {
+    }
+    /*
+     * GetInfo gets data about the TransferD service instance.
+     */
+    rpc GetInfo (InstanceInfoRequest) returns (InstanceInfoResponse) {
+    }
+    /*
+     * IsPeerReachable confirms whether or not the peer endpoint is reachable.
+     */
+    rpc IsPeerReachable (PeerCheckRequest) returns (PeerCheckResponse) {
+    }
+
+    /*
+     * WriteStreamChunk writes chunks of streaming data for the specified in-progress
+     * transfer of type PERSISTENT_STREAM_UPLOAD, at a specific offset.
+     * When StopTransfer is called on the transfer, subsequent calls to this function will fail.
+     */
+    rpc WriteStreamChunk (stream WriteStreamChunkRequest) returns (WriteStreamChunkResponse) {
+    }
+
+    /*
+     * WriteStream writes chunks of streaming data for the specified in-progress transfer of type STREAM_TO_FILE_UPLOAD.
+     * Once StopTransfer is called on the transfer, subsequent calls to this function will fail.
+     */
+    rpc WriteStream (stream WriteStreamRequest) returns (WriteStreamResponse) {
+    }
+
+    /*
+     * ReadStream reads chunks of streaming data from a specified in-progress transfer of type FILE_TO_STREAM_DOWNLOAD.
+     * Once StopTransfer is called on this transfer, subsequent calls to this function will fail.
+     */
+    rpc ReadStream (ReadStreamRequest) returns (stream ReadStreamResponse) {
+    }
+}
+
+/*
+ * TransferType describes the possible transfer types.
+ * When a user requests a new transfer, she can specify the type of transfer in the transferSpec.
+ */
+enum TransferType {
+    /* Unknown transfer type */
+    UNKNOWN_TRANSFER_TYPE = 0;
+    /* File transfer using the paths you provide in the transferSpec */
+    FILE_REGULAR = 1;
+    /* File transfer where you provide the source and destination paths while the transfer is in progress */
+    FILE_PERSISTENT = 2;
+    /* Stream to stream session using the URI that you specify in the transferSpec */
+    URL_STREAM_TO_STREAM = 3 [deprecated = true];
+    /**
+     * Download a file as a stream at the destination. You must specify the size of the source file when starting the streaming of every file.
+     * Note: For this type of transfer, the supported values for the overwrite option are "always" or "never" in the transferSpec: any value other than "always" and "never" is defaulted to "never".
+     * Resume option is not supported: any value for this option is defaulted to "none".
+     */
+    FILE_TO_STREAM_DOWNLOAD = 4;
+    /**
+     * Upload a stream as a file at the destination. You must specify the total number of bytes to upload when starting the streaming of every file.
+     * Note: For this type of transfer, the supported values for the overwrite option are "always" or "never" in the transferSpec: any value other than "always" and "never" is defaulted to "never".
+     * Resume option is not supported: any value for this option is defaulted to "none".
+     */
+    STREAM_TO_FILE_UPLOAD = 5;
+    /* Stream to file upload in a persistent session--meaning that you don't specify the stream size at the beginning of the transfer--using the URI specified in the transferSpec. */
+    PERSISTENT_STREAM_UPLOAD = 6 [deprecated = true];
+    /* Async transfer session using configuration section of the IBM Aspera Sync API */
+    ASYNC_SESSION = 7;
+}
+
+/* TransferStatus statuses a transfer can hold. */
+enum TransferStatus {
+    /* Transfer status is unknown */
+    UNKNOWN_STATUS = 0;
+    /* File or folder is queued for transfer */
+    QUEUED = 1;
+    /* Transfer is running at the time of the query */
+    RUNNING = 2;
+    /* Transfer successfully completed */
+    COMPLETED = 3;
+    /* Transfer failed */
+    FAILED = 4;
+    /* Transfer was canceled by the user */
+    CANCELED = 5;
+    /* Transfer was paused by the user */
+    PAUSED = 6;
+    /* A file transferred without its parent folder */
+    ORPHANED = 7;
+}
+
+/* Transfer events */
+enum TransferEvent {
+    /* Transfer event can't be identified */
+    UNKNOWN_EVENT = 0;
+    /* Transfer session started */
+    SESSION_START = 1;
+    /* Transfer session stopped */
+    SESSION_STOP = 2;
+    /* Transfer session failed with an error */
+    SESSION_ERROR = 3;
+    /* File transfer started */
+    FILE_START = 4;
+    /* File transfer stopped */
+    FILE_STOP = 5;
+    /* File transfer failed with an error */
+    FILE_ERROR = 6;
+    /* ARG_STOP is a management message returned by FASP to indicate the completion
+    * of a transfer path provided as an argument to the transfer binary.
+    */
+    ARG_STOP = 7;
+    /* Transfer in progress */
+    PROGRESS = 8;
+    /* Transfer is connecting */
+    CONNECTING = 9;
+    /* Transfer rate modified during the transfer */
+    RATE_MODIFICATION = 10;
+    /* One or more files skipped during the transfer session */
+    FILE_SKIP = 11;
+    /* Bandwidth measurement assessed during the transfer */
+    BANDWIDTH_MEASUREMENT = 12;
+    /* User canceled session */
+    SESSION_CANCELED = 13;
+}
+
+/* Error message in response */
+message Error {
+    /* Error code */
+    int32 code = 1;
+    /* Description of error */
+    string description = 2;
+}
+
+/* An empty request that gets the API version */
+message APIVersionRequest {
+}
+
+/*
+ * Returns a list of all versions of the API that the transfer binary supports.
+ */
+message APIVersionResponse {
+    /* Supported versions of the API */
+    repeated string supportedVersions = 1;
+}
+
+/* RetryStrategy configures the components of the retry strategy. */
+message RetryStrategy {
+    oneof retryType {
+        /* Basic retry strategy */
+        BasicRetryStrategy basic = 1;
+        /* Exponential retry strategy */
+        ExponentialBackoffRetryStrategy backoff = 2;
+    }
+}
+/* When a transfer fails, a simple strategy to retry the transfer until it completes */
+message BasicRetryStrategy {
+    /* Maximum number of times to retry the transfer */
+    int64 maxCount = 1;
+    /* Interval to wait before retrying the transfer */
+    int64 retryInterval = 2;
+}
+
+/*
+ * When a transfer fails, the exponential strategy for waiting and retrying. The wait time grows exponentially with each retry attempt.
+ */
+message ExponentialBackoffRetryStrategy {
+    /* Maximum number of times to wait and retry before failing the transfer */
+    int64 maxAttempts = 1;
+    /* The exponential multiplier for the wait time. If < 1, default is 2. */
+    int64 multiplier = 2;
+    /* Length of the initial wait time before retrying the transfer. */
+    int64 initialDelay = 3;
+    /* Maximum duration of wait time before retrying the transfer. If <= zero, no maximum is enforced.*/
+    int64 maxDelay = 4;
+}
+
+/* Configuration elements for the transfer */
+message TransferConfig {
+    /* Strategy that is defined for retrying the transfer. Optional. No retry if not set. */
+    RetryStrategy retry = 1;
+    /* Contents of a custom license file. Optional. License in the binary path is used if not set. */
+    string license = 2;
+    /* Local log directory path. Optional. */
+    string localLog = 3;
+    /* Remote log directory path. Optional. */
+    string remoteLog = 4;
+    /*
+     * Level of detail to return in the log. Allowable values: 0 (minimal log data),
+     * 1, 2 (most detailed log data).
+     */
+    sfixed32 logLevel = 5;
+    /* Path to the aspera.conf configuration file. Optional. Configuration file in the etc path is used if not set. */
+    string asperaConf = 6;
+}
+
+/* Transfer range in a file or stream request */
+message TransferRange {
+    /* offset for the stream */
+    int64 offset = 1;
+    /* length of the stream */
+    int64 length = 2;
+}
+
+/* Parameters to submit to the transfer server */
+message TransferRequest {
+    /*
+     * Specify the type of transfer. Allowable values: UNKNOWN_TRANSFER_TYPE, FILE_REGULAR,
+     * FILE_PERSISTENT, URL_STREAM_TO_STREAM, FILE_TO_STREAM_DOWNLOAD, STREAM_TO_FILE_UPLOAD
+     * PERSISTENT_STREAM_UPLOAD
+     */
+    TransferType transferType = 1;
+    /* Policies and permissions for the transfer */
+    TransferConfig config = 2;
+    /* Full configuration details for the transfer */
+    string transferSpec = 3;
+}
+
+/* Data returned from the transfer request */
+message StartTransferResponse {
+    /* Version of the API */
+    string apiVersion = 1;
+    /*
+     * UUID for the transfer returned from the initial transfer request, used for subsequent requests
+     */
+    string transferId = 2;
+    /* User-assigned title for the transfer */
+    string title = 3;
+    /* Type of transfer */
+    TransferType transferType = 4;
+    /* Transfer status */
+    TransferStatus status = 5;
+    /* Error message for the transfer, if any */
+    Error error = 6;
+}
+
+/* Request for information about the transfer */
+message TransferInfoRequest {
+    /* UUID for the transfer returned from the initial transfer request. Used for subsequent requests. */
+    string transferId = 1;
+}
+
+/* Data returned from the transfer request */
+message TransferResponse {
+    /* Version of the API */
+    string apiVersion = 1;
+    /* UID for the transfer returned from the initial transfer request. Used for subsequent requests */
+    string transferId = 2;
+    /* User-assigned title of the transfer */
+    string title = 3;
+    /* Transfer type */
+    TransferType transferType = 4;
+    /* Status of the transfer */
+    TransferStatus status = 5;
+    /* Error message for the transer */
+    Error error = 6;
+    /* Transfer event type */
+    TransferEvent transferEvent = 7;
+    /* Returned information about the transfer */
+    TransferInfo transferInfo = 8;
+    /* Message string */
+    string message = 9;
+    /*
+    * Information about a transfer session. There can be more than one transfer sessions
+    * for a given transfer.
+    */
+    SessionTransferInformation sessionInfo = 10;
+    /* Information about the file transfer */
+    FileTransferInformation fileInfo = 11;
+}
+
+/* Data returned a transfer query */
+message QueryTransferResponse {
+    /* Version of the API */
+    string apiVersion = 1;
+    /*
+     * UUID for the transfer returned from the initial transfer request, used for subsequent requests
+     */
+    string transferId = 2;
+    /* User-assigned title for the transfer */
+    string title = 3;
+    /* Transfer type */
+    TransferType transferType = 4;
+    /* Transfer status */
+    TransferStatus status = 5;
+    /* Error message */
+    Error error = 6;
+    /* Returned information about the transfer */
+    TransferInfo transferInfo = 7;
+    /* Message string */
+    string message = 8;
+}
+
+/* Returned information about the transfer */
+message TransferInfo {
+    /* Average rate for the transfer, in kilobits per second */
+    int64 averageRateKbps = 1;
+    /* Total bytes lost during the transfer */
+    int64 bytesLost = 2;
+    /* Total bytes transferred */
+    int64 bytesTransferred = 3;
+    /* Total bytes written at the destination */
+    int64 bytesWritten = 4;
+    /* Total directories that transferred completely */
+    int64 directoriesCompleted = 5;
+    /* Transfer start time, in microseconds */
+    int64 startTimeUsec = 6;
+    /* Total time elapsed during the transfer, in microseconds */
+    int64 elapsedUsec = 7;
+    /* Transfer end time, in microseconds */
+    int64 endTimeUsec = 8;
+    /* Error code for the transfer */
+    string errorCode = 9;
+    /* Description of error */
+    string errorDescription = 10;
+    /* Number of files that arrived successfully at the destination. */
+    int64 filesCompleted = 11;
+    /* Target transfer rate (in Kbps) */
+    int64 targetRateKbps = 12;
+    /* Minimum transfer rate (in Kbps) */
+    int64 minRateKbps = 13;
+    /* Total number of transfers initiated, where the data is provided as an argument.
+    * For example, for an attempted transfer of a folder that contains multiple files, the
+    * value is 1.
+    */
+    int64 argTransfersAttempted = 14;
+    /*
+    * Total number of successful transfers, where the data is provided as an argument.
+    * For example, for a given transferred folder that contains multiple files, the
+    * value is 1.
+    */
+    int64 argTransfersPassed = 15;
+    /*
+    * Total number of skipped transfers, where the data is provided as an argument.
+    * For example, for a skipped transfer of a folder that contains multiple files, the
+    * value is 1.
+    */
+    int64 argTransfersSkipped = 16;
+    /* Number of failed transfers */
+    int64 argTransfersFailed = 17;
+    /*
+    * Hash of the file checksum.
+    * Allowable values: HASH: sha-512,sha-384,sha-256,sha1,md5.
+    * (Default: none)
+    */
+    string fileChecksumType = 18;
+    /* Application-specified string */
+    string cookie = 19;
+    /* Direction of transfer, either send (upload) or receive (download) */
+    string direction = 20;
+    /* Indicates a transfer or a bandwidth measurement. Allowable values: Transfer, BWMeasurement */
+    string operation = 21;
+    /* All tags to include in the transfer (base64 encoded) */
+    string tags64 = 22;
+}
+
+/*
+* Returned information about a transfer session. There can be multiple transfer sessions for each transfer.
+*/
+message SessionTransferInformation {
+    /* Unique ID that TransferD assigns to a transfer session */
+    string id = 1;
+    /* Unique ID that FASP assigns to a transfer session */
+    string sessionId = 2;
+    /* Remote transfer user */
+    string user = 3;
+    /* Username of the user running the transfer client on the local machine */
+    string clientUser = 4;
+    /* ID of the node for the transfer client on the local machine */
+    string clientNodeId = 5;
+    /* If applicable, the ID of the cluster for high availability on the local machine */
+    string clientClusterId = 6;
+    /* Node ID of the remote transfer server */
+    string serverNodeId = 7;
+    /* If applicable, the ID of the cluster for high availability on the remote transfer server */
+    string serverClusterId = 8;
+    /* IP address for the client on the local machine */
+    string clientIPAddress = 9;
+    /* IP address for the remote transfer server */
+    string serverIPAddress = 10;
+    /* UDP port used by FASP */
+    int64 port = 11;
+    /* TCP port used to initiate a connection with the TransferD */
+    int64 tcpPort = 12;
+    /* Status of the transfer session. Allowable values: initiated, passed, skipped, failed. */
+    string status = 13;
+    /* Transfer start time, in microseconds */
+    int64 startTimeUsec = 14;
+    /* Transfer end time, in microseconds */
+    int64 endTimeUsec = 15;
+    /* Total time elapsed during the transfer, in microseconds */
+    int64 elapsedUsec = 16;
+    /* Total bytes transferred */
+    int64 bytesTransferred = 17;
+    /* Total bytes written at the destination */
+    int64 bytesWritten = 18;
+    /* Total bytes lost during the transfer */
+    int64 bytesLost = 19;
+    /* Total number of files that transferred successfully to the destination */
+    int64 filesCompleted = 20;
+    /* Total number of files that failed to transfer successfully */
+    int64 filesFailed = 21;
+    /* Total number of files skipped during the transfer session */
+    int64 filesSkipped = 22;
+    /* Total number of directories that transferred completely */
+    int64 directoriesCompleted = 23;
+    /* Target transfer rate (Kbps) */
+    int64 targetRateKbps = 24;
+    /* Minimum transfer rate (Kbps) */
+    int64 minRateKbps = 25;
+    /* Calculated transfer rate (Kbps) */
+    int64 calcRateKbps = 26;
+    /* Network delay (microseconds) */
+    int64 networkDelayUsec = 27;
+    /* Error code returned for a failed transfer of files or folders */
+    int64 errorCode = 28;
+    /* Description of the error for a failed transfer of files or folders */
+    string errorDesc = 29;
+    /* Path to the manifest file */
+    string manifestFilePath = 30;
+    /* Number of source paths excluded from the filesystem scan */
+    int64 sourcePathsScanExcluded = 31;
+    /* Number of irregular source paths found in the filesystem scan */
+    int64 sourcePathsScanIrregular = 32;
+    /* Number of source paths in a failed filesystem scan */
+    int64 sourcePathsScanFailed = 33;
+    /* Number of source paths in a filesystem scan that was initiated */
+    int64 sourcePathsScanAttempted = 34;
+    /* Total number of transfers skipped, because, for example, the file already exists
+    * at the destination.
+    */
+    int64 transfersSkipped = 35;
+    /* Total number of successful transfers */
+    int64 transfersPassed = 36;
+    /* Total number of transfers with errors */
+    int64 transfersFailed = 37;
+    /* Total number of transfers initiated */
+    int64 transfersAttempted = 38;
+    /* All cookies included in the transfer */
+    string cookie = 39;
+    /* Direction of transfer, either send (upload) or receive (download) */
+    string direction = 40;
+    /*
+    * Hash of the file checksum.
+    * Allowable values: HASH: sha-512,sha-384,sha-256,sha1,md5.
+    * (Default: none)
+    */
+    string fileChecksumType = 41;
+    /* Indicates a transfer or just a bandwidth measurement. Allowable values: Transfer, BWMeasurement */
+    string operation = 42;
+    /* Metatags in JSON format specified by --tags */
+    string tags = 43;
+    /* Total number of transfers initiated, where the data is provided as an argument */
+    int64 argTransfersAttempted = 44;
+    /* Number of successful transfers, where the data is provided as an argument */
+    int64 argTransfersPassed = 45;
+    /* Number of skipped transfers, where the data is provided as an argument */
+    int64 argTransfersSkipped = 46;
+    /* Number of failed transfers, where the data is provided as an argument */
+    int64 argTransfersFailed = 47;
+    /* If yes, use encryption. */
+    string encryption = 48;
+    /* Transfer policy. Allowable values: Adaptive, Fixed, High */
+    string adaptive = 49;
+    /* If Yes, this process is acting as the server. If No, this process is acting as the client. */
+    string remote = 50;
+    /* Destination path for files being transferred */
+    string destination = 51;
+    /* Transfer priority (1: high | 2: regular) */
+    int64 priority = 52;
+    /*
+    * UUID for the transfer, returned from the initial transfer request. Used for subsequent requests.
+    */
+    string transferId = 53;
+    /* Maximum rate for transfers, in kilobits per second */
+    int64 rateCap = 54;
+    /* Minimum target rate for transfers, in kilobits per second */
+    int64 minRateCap = 55;
+    /* Transfer policy that is allowed */
+    string policyCap = 56;
+    /*
+    * If yes, lock the target transfer rate to the default value set on the server. If no,
+    * changing the target rate is allowed.
+    */
+    string rateLock = 57;
+    /* If no, changing the minimum transfer rate--set on the server--is allowed. */
+    string minRateLock = 58;
+    /* If no, changing the transfer policy (priority)--set on the server--is allowed.  */
+    string policyLock = 59;
+    /* Hostname for the transfer server */
+    string serverHostname = 60;
+    /* IP address for the remote transfer server */
+    string remoteAddress = 61;
+    /* Cipher for content protection */
+    string cipher = 62;
+    /* Policy for resuming a transfer after the transfer is paused */
+    string resumePolicy = 63;
+    /* Policy for creating the transfer */
+    int64 createPolicy = 64;
+    /* Policy for application settings in TransferD */
+    string manifestPolicy = 65;
+    /* Policy for precalculating job size */
+    string precalc = 66;
+    /*
+     * Overwrite files at the destination with source files of the same name based on the policy:
+     * - always – Always overwrite the file.
+     * - never – Never overwrite the file. If the destination contains partial files that are older
+     *      or the same as the source files and resume is enabled, the partial files resume transfer.
+     *      Partial files with checksums or sizes that differ from the source files are not overwritten.
+     * - diff – Overwrite the file if it is different from the source, depending on the compare method
+     *     (default is size). If the destination is object storage, diff has the same effect as always.
+     *     If resume is not enabled, partial files are overwritten if they are different from the source,
+     *     otherwise they are skipped. If resume is enabled, only partial files with different sizes or
+     *     checksums from the source are overwritten; otherwise, files resume.
+     * - diff+older – Overwrite the file if it is older and different from the source, depending on
+     *     the compare method (default is size). If resume is not enabled, partial files are overwritten
+     *     if they are older and different from the source, otherwise they are skipped. If resume is enabled,
+     *     only partial files that are different and older than the source are overwritten, otherwise they
+     *     are resumed.
+     * - older – Overwrite the file if its timestamp is older than the source timestamp.
+
+     * If you set an overwrite policy of diff or diff+older, difference is determined by the value set
+     * for resume_policy:
+     * "none" - the source and destination files are always considered different and the destination
+     *     file is always overwritten
+     * "attributes" - the source and destination files are compared based on file attributes
+     * "sparse_checksum" - the source and destination files are compared based on sparse checksums,
+     *     (currently file size)
+     * "full_checksum" - the source and destination files are compared based on full checksums
+     */
+    string overwritePolicy = 67;
+    /* Round trip time autocorrection */
+    string rttAutocorrect = 68;
+    /* Total time allowed for the transfer */
+    int64 timePolicy = 69;
+    /* Suffix of the manifest file while the transfer is running */
+    string manifestInprogress = 70;
+    /* Specifies that the files are encrypted with user supplied password. Allowable values: yes, no. */
+    string filesEncrypt = 71;
+    /* Specifies that the files are decrypted with user supplied password. Allowable values: yes, no. */
+    string filesDecrypt = 72;
+    /* Sets the datagram size to be used by the sender */
+    int64 datagramSize = 73;
+    /* Version of the aggregate bandwidth caps applied to transfer sessions */
+    int64 vLinkVersion = 74;
+    /* At the peer IP address, version of the aggregate bandwidth caps applied to transfer sessions */
+    int64 peerVLinkVersion = 75;
+    /* Vlkink is enabled on the local machine */
+    string vLinkLocalEnabled = 76;
+    /* Vlkink is enabled on the remote transfer server */
+    string vLinkRemoteEnabled = 77;
+    /* The size of data to be read from the disk on the sender */
+    int64 readBlockSize = 78;
+    /* The size of data to be written to the disk on the receiver */
+    int64 writeBlockSize = 79;
+    /* Number of sessions used in a multi-session transfer */
+    int64 clusterNumNodes = 80;
+    /* The session index number in a multi-session transfer */
+    int64 clusterNodeId = 81;
+    /* Size of data to be transferred when a range transfer is specified */
+    string moveRange = 82;
+    /* The session is running in persistent session mode */
+    string keepalive = 83;
+    /* The session is attempting a login, only, without data transfer */
+    string testLogin = 84;
+    /* Use the forward proxy for Aspera file transfers */
+    string useProxy = 85;
+    /* Algorithm to adapt the transmission rate in response to varying conditions */
+    string rateControlAlgorithm = 86;
+    /* Path maximum transmission unit (MTU) value */
+    int64 pmtu = 87;
+    /* Total number of files discovered at the source that can potentially be transferred */
+    int64 preTransferFiles = 88;
+    /* Total number of bytes  discovered at the source that can potentially be transferred */
+    int64 preTransferBytes = 89;
+    /* Total number of directories discovered at the source that can potentially be transferred */
+    int64 preTransferDirs = 90;
+    /* Total number of special files discovered at the source that can potentially be transferred */
+    int64 preTransferSpecial = 91;
+    /* Total number of source paths that are scanned */
+    int64 sourcePathsScanCompleted = 92;
+    /* Source arguments handled */
+    int64 argScansAttempted = 93;
+    /* Source arguments completed */
+    int64 argScansCompleted = 94;
+    /*
+    * Command line argument index that specified this file (if argument was a directory,
+    * many files can have the same FaspFileArgIndex). In persistent mode, the argument
+    * is constantly increasing.
+    */
+    int64 argFaspFileArgIndex = 95;
+    /* Total number of attempts to create a destination directory. */
+    int64 dirCreatesAttempted = 96;
+    /* Total number of attempts to create a destination directory that failed. */
+    int64 dirCreatesFailed = 97;
+    /*
+    * Total number of attempts to create a directory where the destination directory already
+    * existed or was successfully created
+    */
+    int64 dirCreatesPassed = 98;
+    /* Total source directory scans completed */
+    int64 dirScansCompleted = 99;
+}
+
+/* Returned information about the transfer */
+message FileTransferInformation {
+    /* File ID */
+    string fileId = 1;
+    /* Path for the file transfer */
+    string path = 2;
+    /* Transfer start time, in microseconds */
+    int64 startTimeUsec = 3;
+    /* Total time elapsed during the transfer, in microseconds */
+    int64 elapsedUsec = 4;
+    /* Status of the transfer */
+    string status = 5;
+    /* Error code */
+    int64 errorCode = 6;
+    /* Description of the error */
+    string errorDescription = 7;
+    /* Transfer size (MB) */
+    int64 size = 9;
+    /* Type of file that was transferred */
+    string fileType = 10;
+    /*
+    * Hash of the file checksum.
+    * Allowable values: sha-512,sha-384,sha-256,sha1,md5.
+    * (Default: none)
+    */
+    string fileChecksumType = 11;
+    /* Hash from fileChecksumType */
+    string checksum = 12;
+    /* Offset where file is written */
+    int64 startByte = 13;
+    /* Total bytes written at the destination */
+    int64 bytesWritten = 14;
+    /* From startByte, how many contiguous bytes have been written */
+    int64 bytesContiguous = 15;
+    /* Unique ID that FASP assigns to a transfer session */
+    string sessionId = 16;
+    /*
+    * Command line argument index that specified this file (if argument was a directory,
+    * many files can have the same FaspFileArgIndex). In persistent mode, the argument is
+    * constantly increasing.
+    */
+    int64 faspFileArgIndex = 17;
+}
+
+/* Request to modify the transfer */
+message TransferModificationRequest {
+    /*
+    * UUID for the transfer, returned from the initial transfer request.
+    * Used for subsequent requests
+    */
+    string transferId = 1;
+    /* Defines the configuration parameters for the transfer */
+    string transferSpec = 2;
+}
+
+/* Data returned from the request to modify the transfer */
+message TransferModificationResponse {
+    /* API version */
+    string apiVersion = 1;
+    /* UUID for the transfer returned from the initial transfer request.
+     * Used for subsequent requests.
+     */
+    string transferId = 2;
+    /* Status of the transfer */
+    TransferStatus status = 3;
+    /* Error message, if any */
+    Error error = 4;
+}
+
+/* Request for information about the transfer path */
+message TransferPathRequest {
+    /*
+     * UUID for the transfer, returned from the initial transfer request.
+     * Used for subsequent requests.
+     */
+    string transferId = 1;
+    /* Information about transfer paths, both source and destination  */
+    repeated TransferPath transferPath = 2;
+}
+
+/* Information about transfer paths */
+message TransferPath {
+    /* Source path for files being transferred */
+    string source = 1;
+    /* Destination path for files being transferred */
+    string destination = 2;
+    /* Defines the range for a stream */
+    TransferRange range = 3;
+}
+
+/* Data returned from the request for information about the transfer path */
+message TransferPathResponse {
+    /* Version of the API */
+    string apiVersion = 1;
+    /*
+     * UUID for the transfer returned from the initial transfer request, used for subsequent requests
+     */
+    string transferId = 2;
+    /* Error that is returned */
+    Error error = 3;
+}
+
+/* Request to mark an existing persistent transfer as done */
+message LockPersistentTransferRequest {
+    /*
+     * UUID for the transfer, returned from the initial transfer request.
+     * Used for subsequent requests.
+     */
+    string transferId = 1;
+}
+
+/* Response from the request to mark an existing persistent transfer as done */
+message LockPersistentTransferResponse {
+    /* Version of the API */
+    string apiVersion = 1;
+    /*
+     * UUID for the transfer, returned from the initial transfer request.
+     * Used for subsequent requests.
+     */
+    string transferId = 2;
+    /* Error that is returned */
+    Error error = 3;
+}
+
+/*
+ * Used to compose registration filter items.
+ */
+enum RegistrationFilterOperator {
+    /* Logical OR operator that returns the boolean value TRUE if either or both operands is TRUE and returns FALSE otherwise */
+    OR = 0;
+    /* Logical AND operator that returns a value of TRUE if both its operands are TRUE, and FALSE otherwise */
+    AND = 1;
+}
+
+/* Request to filter specific events */
+message RegistrationRequest {
+    /*
+     * UUID for the transfer, returned from the initial transfer request.
+     * Used for subsequent requests.
+     */
+    repeated string transferId = 1;
+    /*
+     * The RegistrationFilter objects, specifying which filter to apply on events to monitor.
+     * The goal of filter is to narrow down the events monitoring to a subset of events.
+     * Filter items can be composed using an operator (AND/OR, default is OR).
+     * When multiple filters are registered, they are processed as composed with an OR operator.
+     */
+    repeated RegistrationFilter filters = 2;
+}
+
+/*
+ * Components for filtering specific events. A filter without any item is considered as a pass through filter (accepting all the events).
+ */
+message RegistrationFilter {
+    /* Operator applying to this filter set used to compose registration filter items. */
+    RegistrationFilterOperator operator = 1;
+    /* All transfer event types */
+    repeated TransferEvent eventType = 2;
+    /* All UUIDs included in the transfer */
+    repeated string transferId = 3;
+    /* All cookies included in the transfer */
+    repeated string cookie = 4;
+    /* All tags included in the transfer (base64 encoded) */
+    repeated string tags64 = 5;
+    /* Direction of transfer, either send (upload) or receive (download) */
+    string direction = 6;
+    /* Regex match for cookie included in the transfer */
+    string cookieRegex = 7;
+    /* A set of Transfer types */
+    repeated TransferType transferType = 8;
+    /* A set of Transfer status types */
+    repeated TransferStatus transferStatus = 9;
+}
+
+/* Request to stop the transfer */
+message StopTransferRequest {
+    /*
+     * UUID for the transfer, returned from the initial transfer request.
+     * Used for subsequent requests.
+     */
+    repeated string transferId = 1;
+    /* Length of time to delay before stopping the transfer */
+    int64 delay = 2;
+}
+
+/* Data returned from the request to stop the transfer */
+message StopTransferResponse {
+    /* API version */
+    string apiVersion = 1;
+    /* Data about the results of the StopTransferRequest */
+    repeated StopInfo stopResult = 2;
+}
+
+/* Query to find out if the transfer is stopped */
+message StopInfo {
+    /*
+     * UUID for the transfer returned from the initial transfer request, used for subsequent requests
+     */
+    string transferId = 1;
+    /* Transfer is stopped. */
+    bool stopped = 2;
+    /* Error that is returned */
+    Error error = 3;
+}
+
+/* Requests data about the TransferD service instance. */
+message InstanceInfoRequest {
+}
+
+/* Returns data about the TransferD service instance. */
+message InstanceInfoResponse {
+    /* Version of the API */
+    string apiVersion = 1;
+    /* Data about the TransferD service instance */
+    InstanceInfo info = 2;
+    /* Error that is returned */
+    Error error = 3;
+}
+
+/* Data about the TransferD service instance */
+message InstanceInfo {
+    /* Port the TransferD uses to run management messages */
+    int64 managementPort = 1;
+    /* Information about the running IBM Aspera binaries */
+    repeated AsperaInfo asperaInfo = 2;
+    /* Information about the IBM Aspera license */
+    LicenseInfo licenseInfo = 3;
+    /*
+     * Enable promiscuous mode for the transfer. If the transfer is started in promiscuous mode,
+     * sessions are discoverable by any user. Allowable values: true, false.
+     */
+    bool promiscuousMode = 4;
+}
+
+/* Information about the Aspera license */
+message LicenseInfo {
+    /* Maximum transfer rate enabled by the IBM Aspera license */
+    string maxRate = 1;
+    /* IBM Aspera customer account number */
+    string accountNumber = 2;
+    /* IBM Aspera license number */
+    string licenseNumber = 3;
+    /* Contents of the IBM Aspera license */
+    string license = 4;
+}
+
+/* Information about the Aspera transfer binary */
+message AsperaInfo {
+    /* Name of IBM Aspera binary (ascp) */
+    string asperaBinary = 1;
+    /* Version number of the IBM Aspera binary */
+    string asperaVersion = 2;
+    /* User's operating system */
+    string operatingSystem = 3;
+    /* Error that is returned */
+    Error error = 4;
+}
+
+/* Request for a peer check */
+message PeerCheckRequest {
+    /* Configuration parameters for the request */
+    string transferSpec = 1;
+}
+
+/* Data returned from a peer check request */
+message PeerCheckResponse {
+    /* Version of the API */
+    string apiVersion = 1;
+    /* Peer node is reachable. Allowable values: true, false */
+    bool reachable = 2;
+    /* Error data returned from the peer check */
+    Error error = 3;
+}
+
+/* Response to the request to add data packets to the stream */
+message WriteStreamChunkRequest {
+    /* UUID for the transfer returned from the initial transfer request.
+     * Used for subsequentrequests
+     */
+    string transferId = 1;
+    /* Path where stream is written */
+    string path = 2;
+    /* Range for the stream */
+    TransferRange range = 3;
+    /* Byte array sent in the stream */
+    Chunk chunk = 4;
+}
+
+/* Response to the request to write data to the stream */
+message WriteStreamChunkResponse {
+    /* API version */
+    string apiVersion = 1;
+    /* UUID for the transfer returned from the initial transfer request.
+     * Used for subsequent requests.
+     */
+    string transferId = 2;
+    /* Error message, if any */
+    Error error = 3;
+}
+
+/* Request to write data to the stream */
+message WriteStreamRequest {
+    /* UUID for the transfer returned from the initial transfer request.
+     * Used for subsequent requests.
+     */
+    string transferId = 1;
+    /* Path to the stream */
+    string path = 2;
+    /* Stream size */
+    int64 size = 3;
+    /* Byte array sent in the stream */
+    Chunk chunk = 4;
+}
+
+/* Response to the request to write data to the stream */
+message WriteStreamResponse {
+    /* Version of the API */
+    string apiVersion = 1;
+    /*
+     * UUID for the transfer returned from the initial transfer request, used for subsequent requests
+     */
+    string transferId = 2;
+    /* Error that is returned */
+    Error error = 3;
+}
+
+/* Request to read data from the stream */
+message ReadStreamRequest {
+    /* UUID for the transfer returned from the initial transfer request.
+     * Used for subsequent requests.
+     */
+    string transferId = 1;
+}
+
+/* Data returned after reading data from the stream */
+message ReadStreamResponse {
+    /* Version of the API */
+    string apiVersion = 1;
+    /* Path where the stream is read */
+    string path = 2;
+    /* Size of the file or path that is received as a stream */
+    int64 pathSize = 3;
+    /* Byte array sent in the stream */
+    Chunk chunk = 4;
+    /* Error that is returned */
+    Error error = 5;
+}
+
+/* Information about data packets */
+message Chunk {
+    /* Byte array sent in streaming request and returned in response (both send and receive) */
+    bytes contents = 1;
+}
+
+/*
+* ValidationRequest submits the transfer specification (transferSpec) for validation and specifies a transfer type.
+*/
+message ValidationRequest {
+    /* The transfer specification to be validated */
+    string transferSpec = 1;
+    /* The type of transfer */
+    TransferType transferType = 2;
+}
+
+/*
+ * ValidationResponse contains the API version, the version of the transfer spec validator which is used, a boolean to indicate
+ * if the validation is successful, and an error message, if any.
+ */
+message ValidationResponse {
+    /* Version of the API */
+    string apiVersion = 1;
+    /* Transfer specification is valid. Allowable values: true, false. */
+    bool valid = 2;
+    /* Version of transfer specification validator */
+    string validatorVersion = 3;
+    /* Unkown field in the transfer specification */
+    repeated string unknownField = 4;
+    /* Error that is returned */
+    Error error = 5;
+}
+
+/*
+* The transfer specification (transferSpec) contains all components needed to initiate, monitor, and control transfers.
+*/
+message TransferSpecV1 {
+    /* Cipher for content protection */
+    string cipher = 1;
+    /*
+     * Enable client-side content protection (encryption-at-rest).
+     * For uploads, set to encrypt to transfer encrypted files and store them on the server with the extension ".aspera-env".
+     * To download and decrypt encrypted files, set to decrypt.
+     * content_protection_password must be specified if this option is set.
+     * Values are : encrypt and decrypt
+     */
+    string content_protection = 2;
+    /* Password for encryption of transferred assets */
+    string content_protection_password = 3;
+    /* Application-specified string */
+    string cookie = 4;
+    /* Create a directory at the transfer destination */
+    bool create_dir = 5;
+    /* Before transfer, delete files that exist at the destination but not at the source.
+    * The source and destination arguments must be directories that have matching names.
+    * Objects on the destination that have the same name but different type or size as
+    * objects on the source are not deleted.
+    */
+    bool delete_before_transfer = 6;
+    /* Delete the source directory after the assets are transferred */
+    bool delete_source = 7;
+    /* Root ID at the destination */
+    string destination_root_id = 8;
+    /* Directon of transfer, whether send (upload) or receive (download) */
+    string direction = 9;
+    /*
+    * Exclude files (but not directories) that are newer than a specific time from the transfer,
+    * based on when the file was last modified. Express in ISO 8601 format (for example,
+    * 2006-01-02T15:04:05Z) or as number of seconds elapsed since 00:00:00 UTC on 1 January 1970.
+    */
+    string exclude_newer_than = 10;
+    /*
+    * Exclude files (but not directories) that are older than a specific time from the transfer,
+    * based on when the file was last modified. Express in ISO 8601 format (for example,
+    * 2006-01-02T15:04:05Z) or as number of seconds elapsed since 00:00:00 UTC on 1 January 1970.
+    */
+    string exclude_older_than = 11;
+    /* Port used for the transfer. (Default: 33001) */
+    int64 fasp_port = 12;
+    /* Parameters to configure HTTP fallback */
+    bool http_fallback = 13;
+    /* Port used for HTTP fallback server */
+    int64 http_fallback_port = 14;
+    /* Port used for HTTPS fallback */
+    int64 https_fallback_port = 15;
+    /*
+      * Move source files under path the path after transfer success.
+    */
+    string move_after_transfer = 16;
+    /*
+    * Split files across multiple ascp sessions to enable faster transfers.
+    * Allowable values: true, false.
+    */
+    int64 multi_session = 17;
+    /*
+    * Split files across multiple ascp sessions if their size is greater than or equal
+    * to the specified value. Default: 0 (no files are split).
+    */
+    int64 multi_session_threshold = 18;
+    /*
+     * Overwrite files at the destination with source files of the same name based on the policy:
+     * - always – Always overwrite the file.
+     * - never – Never overwrite the file. If the destination contains partial files that are older
+     *      or the same as the source files and resume is enabled, the partial files resume transfer.
+     *      Partial files with checksums or sizes that differ from the source files are not overwritten.
+     * - diff – Overwrite the file if it is different from the source, depending on the compare method
+     *     (default is size). If the destination is object storage, diff has the same effect as always.
+     *     If resume is not enabled, partial files are overwritten if they are different from the source,
+     *     otherwise they are skipped. If resume is enabled, only partial files with different sizes or
+     *     checksums from the source are overwritten; otherwise, files resume.
+     * - diff+older – Overwrite the file if it is older and different from the source, depending on
+     *     the compare method (default is size). If resume is not enabled, partial files are overwritten
+     *     if they are older and different from the source, otherwise they are skipped. If resume is enabled,
+     *     only partial files that are different and older than the source are overwritten, otherwise they
+     *     are resumed.
+     * - older – Overwrite the file if its timestamp is older than the source timestamp.
+
+     * If you set an overwrite policy of diff or diff+older, difference is determined by the value set
+     * for resume_policy:
+     * "none" - the source and destination files are always considered different and the destination
+     *     file is always overwritten
+     * "attributes" - the source and destination files are compared based on file attributes
+     * "sparse_checksum" - the source and destination files are compared based on sparse checksums,
+     *     (currently file size)
+     * "full_checksum" - the source and destination files are compared based on full checksums
+     */
+    string overwrite = 19;
+    repeated Path paths = 20; // Path for the transfer
+    /*
+      * Restore the access time of the source file to the last access prior to transfer,
+      * which the source considers an access.
+    */
+    bool precalculate_job_size = 21;
+    /*
+    * Preserve the time the file was last accessed (read or write access) on the source.
+    */
+    bool preserve_access_time = 22;
+    /* Preserve timestamp for when a file is created */
+    bool preserve_creation_time = 23;
+    /* Preserve the time the object was last modified (write access) on the source. */
+    bool preserve_modification_time = 24;
+    /* Preserve file timestamps */
+    bool preserve_times = 25;
+    /*
+    * The transfer rate policy to use when sharing bandwidth. Allowable values:
+    * high - When sharing bandwidth, transfer at twice the rate of a transfer using a fair policy.
+    * fair - (Default) Share bandwidth equally with other traffic.
+    * low - Use only unused bandwidth.
+    * fixed - Transfer at the target rate, regardless of the actual network capacity.
+    * Do not share bandwidth. Aspera recommends that you do not use this setting except under special
+    * circumstances, otherwise the destination storage can be damaged.
+    */
+    string rate_policy = 26;
+    /* Access key for the remote server */
+    string remote_access_key = 27;
+    /* Remote server used for the transfer */
+    string remote_host = 28;
+    /* Password for the remote user */
+    string remote_password = 29;
+    /* Remote user's username */
+    string remote_user = 30;
+    /* Remove files at the source of the transfer after the transfer completes successfully */
+    bool remove_after_transfer = 31;
+    /* Remove empty subdirectories at the source of the transfer */
+    bool remove_empty_directories = 32;
+    /* If a transfer is interrupted or fails to finish, this policy directs the transfer
+    *     to resume without retransferring the files. Allowable values:
+    * "none"            – always re-transfer the entire file
+    * "attributes"      – compare file attributes and resume if they match, and re-transfer if they do not
+    * "sparse_checksum" – compare file attributes and the sparse file checksums; resume if they match, and
+    *     re-transfer if they do not
+    * "full_checksum"   – compare file attributes and the full file checksums; resume if they match, and re-transfer
+    *     if they do not.
+    */
+    string resume_policy = 33;
+    /* Total time committed to retrying the transfer */
+    int64 retry_duration = 34;
+    /* The file ID of the source root directory. Required if using bearer token authorization for the source node. */
+    string source_root_id = 35;
+    /* TCP port that initiates the transfer session */
+    int64 ssh_port = 36;
+    /* Private key for SSH */
+    string ssh_private_key = 37;
+    /* Private key passphrase for SSH */
+    string ssh_private_key_passphrase = 38;
+    /*
+    * The method for processing symbolic links.
+    * Allowable values: follow, copy, copy+force, skip
+    */
+    string symlink_policy = 39;
+    /* Tags to include in the transfer */
+    string tags = 40;
+    /* Tags to include in the transfer (base64 encoded) */
+    string tags64 = 41;
+    /* Maximum target rate for incoming transfers, in kilobits per second. */
+    int64 target_rate_cap_kbps = 42;
+    /* Ideal transfer rate, in kilobits per second. There is no default value. */
+    int64 target_rate_kbps = 43;
+    /* Title of the transfer */
+    string title = 44;
+    /*
+    * Token to authenticate the transfer.
+    * For details see the 'Authentication and authorization' section in the IBM Aspera High Speed Transfer Server
+    * admin guide.
+    */
+    string token = 45;
+    /* Use ascp4 as the transfer engine. Allowable values: true, false. */
+    bool use_ascp4 = 46 [deprecated = true];
+    /* Proxy for communications between the remote server and the (local) client. */
+    FASPProxy fasp_proxy = 47;
+    /* Destination root directory */
+    string destination_root = 48;
+    /* Source root directory */
+    string source_root = 49;
+    /*
+    * The highest minimum rate that an incoming transfer can request, in kilobits per second.
+    * Client minimum rate requests that exceed the minimum rate cap are ignored. The default
+    * value of unlimited applies no cap to the minimum rate. (Default: 0)
+    */
+    int64 min_rate_cap_kbps = 50;
+    /*
+    * If true, lock the rate policy to the default value
+    * Allowable values: true, false.
+    */
+    bool lock_rate_policy = 51;
+    /*
+    * If true, lock the target transfer rate to the default value set for target_rate_kbps.
+    * If false, users can adjust the transfer rate up to the value set for target_rate_cap_kbps.
+    */
+    bool lock_target_rate_kbps = 52;
+    /*
+    * If true, lock the minimum transfer rate to the value set for min_rate_kbps.
+    * If false, users can adjust the transfer rate up to the value set for target_rate_cap_kbps.
+    */
+    bool lock_min_rate_kbps = 53;
+    /* The folder name below which the directory structure is preserved (base64 encoded) */
+    string src_base64 = 54;
+    /* Configuration parameters for IBM Cloud Object Storage (ICOS) */
+    ICOSSpec icos = 55;
+    /* Configuration parameters for a call to the Node API */
+    NodeAPISpec node_api = 56;
+    /*
+    * Apply the local docroot. This option is used to avoid entering object storage
+    * access credentials in the command line. Allowable values: true, false.
+    */
+    bool apply_local_docroot = 57;
+    /* Preserve access control lists. Allowable values: none, native, metafile. */
+    string preserve_acls = 58;
+    /* Preserve remote access control lists. Allowable values: none, native, metafile */
+    string preserve_remote_acls = 59;
+    /* Preserve the user ID for a file owner */
+    bool preserve_file_owner_uid = 60;
+    /* Preserve the group ID for a file owner */
+    bool preserve_file_owner_gid = 61;
+    /* Preserve the extended attributes. Allowable values: none, native, metafile */
+    string preserve_extended_attrs = 62;
+    /*
+    * Preserve the extended attributes for a remote server. Allowable values: none,
+    * native, metafile
+    */
+    string preserve_remote_extended_attrs = 63;
+    /* Preserve the time logged for when the source file was accessed */
+    bool preserve_source_access_time = 64;
+    /* Remove empty source subdirectories and remove the source directory itself, if empty */
+    bool remove_empty_source_dir = 65;
+    /* Rename the file instead of overwriting it. Allowable values: true, false. */
+    bool save_before_overwrite = 66;
+    /* Don't check for duplicate files at the destination. Allowable values: true, false. */
+    bool skip_duplicate_check = 67;
+    /*
+    * All assets other than files, directories and symbolic links are considered special.
+    * A transfer will fail if the user attempts to transfer special assets.
+    * If true, ascp skips special assets and proceeds with the transfer of all other assets.
+    */
+    bool skip_special_files = 68;
+    /* Path to private key for SSH */
+    string ssh_private_key_path = 69;
+}
+
+/* Information about the transfer path */
+message Path {
+    /* Source path for the transfer */
+    string source = 1;
+    /* Destination path for the transfer */
+    string destination = 2;
+}
+/*
+* Access parameters for the Proxy that coordinates communications between the remote server and the (local) client.
+*/
+message FASPProxy {
+    /* URL of proxy server */
+    string url = 1;
+    /* Username for the proxy user */
+    string username = 2;
+    /* Password for the proxy user */
+    string password = 3;
+}
+
+/* The transfer specification (transferSpec) contains all components needed to initiate, monitor, and control transfers.
+TransferSpecv2 allows you to construct a custom transfer specification. You only need to configure the modules (such as
+* Security or Transport) and parameters that are essential for your transfers.
+*/
+message TransferSpecV2 {
+    /* Parameters that define transfer initiation, including SSH */
+    Initiation session_initiation = 1;
+    /* Parameters that define security for the transfer */
+    Security security = 2;
+    /* Parameters that define asset tracking for the transfer, such as tags */
+    Tracking tracking = 3;
+    /* Parameters that define the handling of files and directories being transferred */
+    Filesystem file_system = 4;
+    /* Parameters that define rate policy and transfer rate */
+    Transport transport = 5;
+    /* Parameters that define source and location for the transfer */
+    Assets assets = 6;
+    /* Direction of the transfer, whether send (upload) or receive (download) */
+    string direction = 7;
+    /* Name of the remote server */
+    string remote_host = 8;
+    /* Name assigned to the transfer */
+    string title = 9;
+}
+
+/* Elements of transfer initiation */
+message Initiation {
+    /* Parameters relating to SSH */
+    SSHSpec ssh = 1;
+    /* Parameters relating to IBM Cloud Object Storage */
+    ICOSSpec icos = 2;
+    /* Configuration parameters for a call to the Node API */
+    NodeAPISpec node_api = 3;
+}
+
+/* SSH Configuration */
+message SSHSpec {
+    /* TCP port that initiates the transfer session. */
+    int64 ssh_port = 1;
+    /* Password for the remote user */
+    string remote_password = 2;
+    /* Remote user's username */
+    string remote_user = 3;
+    /* Private key for SSH */
+    string ssh_private_key = 4;
+    /* Private key passphrase for SSH */
+    string ssh_private_key_passphrase = 5;
+    /* Public SSH key of the server */
+    string ssh_fingerprint = 6;
+    /* Path to private key for SSH */
+    string ssh_private_key_path = 7;
+}
+
+/* Configuration for IBM Cloud Object Storage */
+message ICOSSpec {
+    /* API key for IBM Cloud Object Storage */
+    string api_key = 1;
+    /* CRN (cloud resource name) for the bucket */
+    string bucket = 2;
+    /* Instance ID for the IBM service */
+    string ibm_service_instance_id = 3;
+    /* Endpoint for the IBM service */
+    string ibm_service_endpoint = 4;
+}
+
+/* Values for the Node API header. The Node API is used to initiate and manage Aspera transfers. */
+message NodeAPIHeaderSpec {
+    /* Node API header key */
+    string key = 1;
+    /* Value for Node API header key */
+    string value = 2;
+}
+
+/* Information for the call to the Node API, which initiates and manages Aspera transfers. */
+message NodeAPISpec {
+    /* URL for call to Node API */
+    string url = 1;
+    /* Headers for the call to the Node API */
+    repeated NodeAPIHeaderSpec headers = 2;
+}
+
+/* Security configuration */
+message Security {
+    /* Password for encryption of transferred assets */
+    string content_protection_password = 1;
+    /* Access key for a remote server */
+    string remote_access_key = 2;
+    /*
+    * Token to authenticate the transfer.
+    * For details see the 'Authentication and authorization' section in the IBM Aspera High Speed Transfer Server
+    * admin guide.
+    */
+    string token = 3;
+    /**
+     * Cipher algorithm to apply during the transfer. Valid values are:
+     * aes-128, aes-192, aes-256, aes-128-cfb, aes-192-cfb, aes-256-cfb,
+     * aes-128-gcm, aes-192-gcm, aes-256-gcm, none
+     */
+    string cipher = 4;
+}
+
+/* Tracking parameters */
+message Tracking {
+    /* All cookies included in the transfer */
+    string cookie = 1;
+    /* All tags included in the transfer */
+    string tags = 2;
+    /* All tags included in the transfer (base64 encoded) */
+    string tags64 = 3;
+}
+
+/* Policies related to transfer assets */
+message Filesystem {
+    bool create_dir = 1; // Create a directory at the transfer destination
+    /* Before transfer, delete files that exist at the destination but not at the source.
+    * The source and destination arguments must be directories that have matching names.
+    * Objects on the destination that have the same name but different type or size as
+    * objects on the source are not deleted.
+    */
+    bool delete_before_transfer = 2;
+    /* Exclude files (but not directories) that are newer than a specific time from the transfer,
+    * based on when the file was last modified. Express in ISO 8601 format (for example,
+    * 2006-01-02T15:04:05Z) or as number of seconds elapsed since 00:00:00 UTC on 1 January 1970.
+    */
+    string exclude_newer_than = 3;
+    /* Exclude files (but not directories) that are older than a specific time from the transfer,
+    * based on when the file was last modified. Express in ISO 8601 format (for example,
+    * 2006-01-02T15:04:05Z) or as number of seconds elapsed since 00:00:00 UTC on 1 January 1970.
+    */
+    string exclude_older_than = 4;
+    /*
+    * Move source files under path the path after transfer success.
+    */
+    string move_after_transfer = 5;
+    /*
+     * Overwrite files at the destination with source files of the same name based on the policy:
+     * - always – Always overwrite the file.
+     * - never – Never overwrite the file. If the destination contains partial files that are older
+     * or the same as the source files and resume is enabled, the partial files resume transfer.
+     * Partial files with checksums or sizes that differ from the source files are not overwritten.
+     * - diff – Overwrite the file if it is different from the source, depending on the compare method
+     * (default is size). If the destination is object storage, diff has the same effect as always.
+     * If resume is not enabled, partial files are overwritten if they are different from the source,
+     * otherwise they are skipped. If resume is enabled, only partial files with different sizes or
+     * checksums from the source are overwritten; otherwise, files resume.
+     * - diff+older – Overwrite the file if it is older and different from the source, depending on
+     * the compare method (default is size). If resume is not enabled, partial files are overwritten
+     * if they are older and different from the source, otherwise they are skipped. If resume is enabled,
+     * only partial files that are different and older than the source are overwritten, otherwise they
+     * are resumed.
+     * - older – Overwrite the file if its timestamp is older than the source timestamp.
+
+     * If you set an overwrite policy of diff or diff+older, difference is determined by the value set
+     * for resume_policy:
+     * "none" - the source and destination files are always considered different and the destination
+     *     file is always overwritten
+     * "attributes" - the source and destination files are compared based on file attributes
+     * "sparse_checksum" - the source and destination files are compared based on sparse checksums,
+     *     (currently file size)
+     * "full_checksum" - the source and destination files are compared based on full checksums
+     */
+    string overwrite = 6;
+    /* Restore the access time of the source file to the last access prior to transfer,
+      * which the source considers an access.
+    */
+    bool precalculate_job_size = 7;
+    /* Preserve the time the file was last accessed (read or write access) on the source. */
+    bool preserve_access_time = 8;
+    /* Preserve timestamp for when a file was created */
+    bool preserve_creation_time = 9;
+    /* Preserve the time the object was last modified (write access) on the source. */
+    bool preserve_modification_time = 10;
+    bool preserve_times = 11;
+    /* Remove files at the source of the transfer after the transfer completes successfully */
+    bool remove_after_transfer = 12;
+    /* Remove empty subdirectories at the source of the transfer */
+    bool remove_empty_directories = 13;
+    /* If a transfer is interrupted or fails to finish, this policy directs the transfer
+    *  to resume without retransferring the files. Allowable values:
+    * "none"            – always re-transfer the entire file
+    * "attributes"      – compare file attributes and resume if they match, and re-transfer if they do not
+    * "sparse_checksum" – compare file attributes and the sparse file checksums; resume if they match, and
+    *     re-transfer if they do not
+    * "full_checksum"   – compare file attributes and the full file checksums; resume if they match, and re-transfer
+    *     if they do not.
+    */
+    string resume_policy = 14;
+    /* The method for processing symbolic links. Allowable values:
+    * follow, copy, copy+force, skip
+    */
+    string symlink_policy = 15;
+    /* Enable checksum reporting for transferred files by specifying the hash to use. Allowable values:
+    * sha-512, sha-384, sha-256, sha1, md5. (Default: none)
+    */
+    string checksum_type = 16;
+    /* The folder name below which the directory structure is preserved (base64 encoded) */
+    string src_base64 = 17;
+    /* Include files or directories from the transfer based on the specified pattern. Rules are
+    * applied in the order in which they are encountered, from left to right. The following
+    * symbols can be used in the pattern:
+    * - * (asterisk) represents zero or more characters in a string, for example *.tmp matches
+    *     .tmp and abcde.tmp.
+    * - ? (question mark) represents a single character, for example t?p matches tmp but not temp.
+    */
+    repeated PathPattern inclusion_patterns = 18;
+    /* Exclude files or directories from the transfer based on the specified pattern. Rules are
+    * applied in the order in which they are encountered, from left to right. The following
+    * symbols can be used in the pattern:
+    * - * (asterisk) represents zero or more characters in a string, for example *.tmp matches
+    *   .tmp and abcde.tmp.
+    * - ? (question mark) represents a single character, for example t?p matches tmp but not temp.
+    */
+    repeated PathPattern exclusion_patterns = 19;
+    /*
+    * Apply the local docroot. This option is used to avoid entering object storage access
+    * credentials in the command line. Allowable values: true, false.
+    */
+    bool apply_local_docroot = 20;
+    /* Preserve access control lists. Allowable values: none, native, metafile. */
+    string preserve_acls = 21;
+    /* Preserve remote access control lists. Allowable values: none, native, metafile */
+    string preserve_remote_acls = 22;
+    /* Preserve the user ID for a file owner */
+    bool preserve_file_owner_uid = 23;
+    /* Preserve the group ID for a file owner */
+    bool preserve_file_owner_gid = 24;
+    /* Preserve the extended attributes. Allowable values: none, native, metafile */
+    string preserve_extended_attrs = 25;
+    /* Preserve the extended attributes for a remote server. Allowable values: none, native, metafile */
+    string preserve_remote_extended_attrs = 26;
+    /* Preserve the time logged for when the source file was accessed */
+    bool preserve_source_access_time = 27;
+    /* Remove empty source subdirectories and remove the source directory itself, if empty */
+    bool remove_empty_source_dir = 28;
+    /* Rename the file instead of overwriting it. Allowable values: true, false. */
+    bool save_before_overwrite = 29;
+    /* Don't check for duplicate files at the destination. Allowable values: true, false. */
+    bool skip_duplicate_check = 30;
+    /*
+    * All assets other than files, directories and symbolic links are considered special.
+    * A transfer will fail if the user attempts to transfer special assets.
+    * If true, ascp skips special assets and proceeds with the transfer of all other assets.
+    */
+    bool skip_special_files = 31;
+}
+
+/* Values related to the transfer, including transfer policies */
+message Transport {
+    /* Port used for the transfer. (Default: 33001) */
+    int64 fasp_port = 1;
+    /* Fields for configuring HTTP fallback in the transferSpec v2 */
+    HTTPFallback http_fallback = 2;
+    /*
+    * Fields for configuring the FASP proxy in the transferSpec v2. The FASP proxy coordinates
+    * communications between the remote server and the (local) client.
+    */
+    FASPProxy fasp_proxy = 3;
+    /* Fields for configuring streaming in the transferSpec v2. */
+    Streaming streaming = 4;
+    /*
+    * Split files across multiple ascp sessions to enable faster transfers.
+    * Allowable values: true, false.
+    */
+    MultiSession multi_session = 5;
+    /*
+    * Split files across multiple ascp sessions if their size is greater than or equal to the
+    * specified value. Default: 0 (no files are split).
+    */
+    int64 multi_session_threshold = 6;
+    /*
+    * The transfer rate policy to use when sharing bandwidth. Allowable values:
+    * high - When sharing bandwidth, transfer at twice the rate of a transfer using a fair policy.
+    * fair - (Default) Share bandwidth equally with other traffic.
+    * low - Use only unused bandwidth.
+    * fixed - Transfer at the target rate, regardless of the actual network capacity.
+    * Do not share bandwidth. Aspera recommends that you do not use this setting except under special
+    * circumstances, otherwise the destination storage can be damaged.
+    */
+    string rate_policy = 7;
+    /*
+    * If true, lock the rate policy to the default value
+    * Allowable values: true, false.
+    */
+    bool lock_rate_policy = 8;
+    /* Maximum target rate for incoming transfers, in kilobits per second. */
+    int64 target_rate_cap_kbps = 9;
+    /* Ideal transfer rate, in kilobits per second. There is no default value. */
+    int64 target_rate_kbps = 10;
+    /*
+    * The highest minimum rate that an incoming transfer can request, in kilobits per second.
+    * Client minimum rate requests that exceed the minimum rate cap are ignored. The default
+    * value of unlimited applies no cap to the minimum rate. (Default: unlimited)
+    */
+    int64 min_rate_cap_kbps = 11;
+    /* Minimum transfer rate (in Kbps) */
+    int64 min_rate_kbps = 12;
+    /*
+    * If true, lock the target transfer rate to the default value set for target_rate_kbps.
+    * If false, users can adjust the transfer rate up to the value set for target_rate_cap_kbps.
+    */
+    bool lock_target_rate_kbps = 13;
+    /*
+    * If true, lock the minimum transfer rate to the value set for min_rate_kbps.
+    * If false, users can adjust the transfer rate up to the value set for target_rate_cap_kbps.
+    */
+    bool lock_min_rate_kbps = 14;
+    /* Use the ascp4 engine. Allowable values: true, false. */
+    bool use_ascp4 = 15 [deprecated = true];
+}
+
+/* Assets for the transfer */
+message Assets {
+    /* File ID of the destination root directory. Required if using bearer token authorization for the destination node. */
+    string destination_root_id = 1;
+    /* File ID of the source root directory */
+    string source_root_id = 2;
+    /* Destination root directory */
+    string destination_root = 3;
+    /* Source root directory */
+    string source_root = 4;
+    /* Array of paths */
+    repeated Path paths = 5;
+}
+
+/* Data pattern used in the transfer path */
+message PathPattern {
+    /* Pattern, such as regex, used in the transfer path */
+    string pattern = 1;
+}
+
+/* Configuration for HTTP fallback */
+message HTTPFallback {
+    /* Port used for HTTP fallback server */
+    int64 port = 1;
+    /* Proxy address and port. (Default: 80) */
+    string proxy = 2;
+}
+
+/* Configuration for streaming */
+message Streaming {
+    /*
+    * Size of the byte array sent in streaming request and returned in response for
+    * both send and receive.
+    */
+    int64 chunk_size = 1;
+    /* Amount of memory available on the local machine */
+    int64 local_memory = 2;
+    /* Amount of memory available on the remote server */
+    int64 remote_memory = 3;
+    /*
+    * Enable ascp4 to write sparse files to disk. This option prevents ascp4 from writing
+    * zero content to disk for sparse files; ascp4 writes a block to disk if even one bit
+    * is set in that block. If no bits are set in the block, ascp4 does not write the block
+    * (Default size of ascp4 blocks is 64 KB.)
+    */
+    bool sparse_file = 4;
+    /*
+    * Compression object containing a string. Compress file data inline.
+    * Allowable values: none, zlib, lz4. (Default: lz4). If set to zlib, the compression hint
+    * can be used to set the compression level.
+    */
+    Compression compression = 5;
+}
+
+/*
+* Compression object containing a string. Compresses file data inline.
+* Allowable values: none, zlib, lz4. (Default: lz4). If set to zlib, the compression hint can be used to set the compression level.
+*/
+message Compression {
+    /*
+    * The method for compressing file data. Allowable values: none, zlib, lz4. (Default: lz4).
+    * If set to zlib, the compression hint can be used to set the compression level.
+    */
+    string method = 1;
+    /*
+    * Compress file data to the specified level when the compression method is set to an option
+    * that accepts compression level settings (currently only zlib). A lower value results in less,
+    * but faster, data compression (0 = no compression). A higher value results in greater, slower compression.
+    * Valid values are "-1" to "9", where "-1" is "balanced". (Default: "-1")
+    */
+    int32 hint = 2;
+}
+
+/*
+* MultiSession settings object. Specifies the configuration on how
+* the transfer fileset will be split so it is transferred in parallel
+* using multiple transfer processes.
+*/
+message MultiSession {
+    /*
+    * Enable using multisession mode.
+    */
+    bool enable = 1;
+    /*
+    * Number of parallel processes to transfer the fileset.
+    */
+    int32 number_of_sessions = 2;
+    /*
+    * Settings for using different remote hosts for the multiple
+    * transfer processes.
+    */
+    MultiSessionHosts hosts = 3;
+    /*
+    * Settings for the minimum size required to partition a single file
+    * across multiple transfer processes.
+    */
+    MultiSessionFileSplitting file_splitting = 4;
+    /*
+    * Settings for the minimum rate required to enable multisession.
+    */
+    MultiSessionBandwidth bandwidth = 5;
+}
+
+/*
+* Settings for using different remote hosts for the multiple
+* transfer processes.
+*/
+message MultiSessionHosts {
+    /*
+    * Use the different IP addresses associated with the specified
+    * remoteHost hostname as destinations for the different transfer processes.
+    */
+    bool usedns = 1;
+    /*
+    * If not using DNS, specify a list of hosts to use for the different
+    * transfer processes.
+    */
+    repeated string hosts = 2;
+}
+
+/*
+* Settings for the minimum size required to partition a single file
+* across multiple transfer processes.
+*/
+message MultiSessionFileSplitting {
+    /*
+    * Minimum size in kilobytes (kb) required to partition a single file
+    * across multiple transfer processes.
+    */
+    int32 size_kb_threshold = 1;
+}
+
+/*
+* Settings for the minimum rate required to enable multisession.
+*/
+message MultiSessionBandwidth {
+    /*
+    * Minimum bandwidth rate in kilobits per second (kbps) required
+    * to enable multisession.
+    */
+    int32 bandwidth_kpbs_threshold = 1;
+}
