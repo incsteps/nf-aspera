@@ -6,8 +6,7 @@ option go_package = "ibm.com/aspera/transferd/api";
 
 // option for Java
 option java_package = "com.ibm.software.aspera.transferd.api";
-//option java_outer_classname = "TransferService"; // Default is TransferService
-//option java_multiple_files = true;
+option java_multiple_files = true;
 
 /*
  * Transfer service definition. This service enables users to start, manage and monitor transfers.

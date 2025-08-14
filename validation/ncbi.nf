@@ -1,5 +1,6 @@
 include {withAspera} from 'plugin/nf-aspera'
 
+params.outdir = 'work/outdir'
 
 process DECOMPRESS_GZ {
     publishDir params.outdir, mode: 'copy'
@@ -64,7 +65,7 @@ workflow{
         client: 'ncbi',
         destination:'downloads/',
         sources:[
-            '/refseq/release/bacteria/',
+            '/refseq/release/bacteria/bacteria.1.2.genomic.fna.gz',
         ]
     ])
     | filter { "$it".endsWith("gz") }

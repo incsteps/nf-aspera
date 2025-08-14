@@ -5,12 +5,16 @@ import groovy.util.logging.Slf4j
 import groovyx.gpars.dataflow.DataflowWriteChannel
 import nextflow.Channel
 import nextflow.Session
+import nextflow.extension.CH
 import nextflow.plugin.extension.Factory
 import nextflow.plugin.extension.PluginExtensionPoint
-import nextflow.extension.CH
 
 import java.nio.file.Path
 
+/**
+ *
+ * @author Jorge Aguilera <jorge@incsteps.com>
+ */
 @Slf4j
 @CompileStatic
 class AsperaExtension extends PluginExtensionPoint{
@@ -46,12 +50,17 @@ class AsperaExtension extends PluginExtensionPoint{
 
         params.put "destination", Path.of(session.workDir.toString(), params.destination.toString()).toAbsolutePath().toString()
 
-        def transferred = transferd.downloadAssets(clientConfig, params.destination?.toString(), sources, new TransferListener() {
-            @Override
-            void onFileCompleted(File file) {
-                target << file.absolutePath
-            }
-        })
+        try {
+            def transferred = transferd.downloadAssets(clientConfig, params.destination?.toString(), sources, new TransferListener() {
+                @Override
+                void onFileCompleted(File file) {
+                    target << file.absolutePath
+                }
+            })
+            log.info "Files received {}", transferred
+        }catch (e){
+            log.error e.getMessage(), e
+        }
 
         target << Channel.STOP
     }

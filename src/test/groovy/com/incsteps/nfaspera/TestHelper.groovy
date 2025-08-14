@@ -25,7 +25,7 @@ import java.nio.file.Path
 
 /**
  *
- * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
+ * @author Jorge Aguilera <jorge@incsteps.com>
  */
 class TestHelper {
 

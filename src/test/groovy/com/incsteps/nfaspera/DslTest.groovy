@@ -76,6 +76,8 @@ class DslTest extends Dsl2Spec{
                     ]
                 ]
         ]
+        if( new File("build/100MB").exists())
+            new File("build/100MB").delete()
         when:
         def SCRIPT = '''
             include {withAspera } from 'plugin/nf-aspera'

@@ -2,21 +2,17 @@ package com.incsteps.nfaspera
 
 import groovy.transform.PackageScope
 
+import java.nio.file.Path
 
 /**
- * This class allows model an specific configuration, extracting values from a map and converting
  *
- *
- * We anotate this class as @PackageScope to restrict the access of their methods only to class in the
- * same package
- *
- * @author : jorge <jorge.aguilera@seqera.io>
- *
+ * @author Jorge Aguilera <jorge@incsteps.com>
  */
 @PackageScope
 class PluginConfig {
 
-    final private String transferdPath = "/home/jorge/personales/aspera-demo/ibm-aspera-transfer-sdk-linux-amd64-1.1.5/sbin/transferd"
+    final private String transferdPath =
+            "/ibm/linux-amd64-1.1.6/sbin/transferd"
 
     final private Map<String, AsperaClient> clients
 
@@ -33,7 +29,7 @@ class PluginConfig {
     }
 
     String getTransferdPath(){
-        this.transferdPath
+        Path.of( this.class.getResource(transferdPath).toURI()).toAbsolutePath().toString()
     }
 
     protected static Map<String, AsperaClient> collectClients(Map config){
@@ -57,7 +53,7 @@ class PluginConfig {
                     remote_user: config?.remote_user,
                     remote_host: config?.remote_host,
                     remote_password: config?.remote_password,
-                    ssh_private_key_path:config?.ssh_private_key_path,
+                    ssh_private_key_path:new File(config ? config.ssh_private_key_path.toString():".").absolutePath.toString(),
                     ssh_private_key_passphrase:config?.ssh_private_key_passphrase,
                     cipher: config?.cipher,
             )

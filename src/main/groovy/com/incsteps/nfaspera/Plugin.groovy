@@ -21,9 +21,9 @@ import nextflow.plugin.BasePlugin
 import org.pf4j.PluginWrapper
 
 /**
- * Implements the Hello plugins entry point
+ * Implements the plugin entry point
  *
- * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
+ * @author Jorge Aguilera <jorge@incsteps.com>
  */
 @CompileStatic
 class Plugin extends BasePlugin {

@@ -21,7 +21,7 @@ import spock.lang.Specification
 
 /**
  *
- * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
+ * @author Jorge Aguilera <jorge@incsteps.com>
  */
 class FactoryTest extends Specification {
 

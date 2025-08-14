@@ -1,0 +1,34 @@
+log_directory : .
+log_level : info
+address : 127.0.0.1
+port : 55001
+api_time_settings :
+  max_conn_idle : 120
+  max_conn_age : 180
+  max_conn_age_grace : 10
+  time : 1
+  timeout : 3
+tls :
+  enabled : false
+  certificate : cert.cert
+  key : key
+authentication :
+  enabled : false
+  api_key : key
+workers :
+  max_concurrent : 10
+  transfer_cleaning_period : 120
+  transfer_max_age : 240
+fasp_management :
+  promiscuous_mode_enabled : True
+  port : 23456
+fasp_runtime :
+  use_embedded : True
+  log:
+    dir: .
+    level: 0
+  user_defined :
+    bin : ./bin/
+    etc : ./etc/
+datastore :
+  enabled : false

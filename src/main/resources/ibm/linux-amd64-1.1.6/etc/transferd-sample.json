@@ -1,0 +1,42 @@
+{
+  "log_directory": ".",
+  "log_level": "debug",
+  "address": "127.0.0.1",
+  "port": 55002,
+  "api_time_settings": {
+    "max_conn_idle": 120,
+    "max_conn_age": 180,
+    "max_conn_age_grace": 10,
+    "time": 1,
+    "timeout": 3
+  },
+  "authentication": {
+    "enabled": false,
+    "api_key": "key"
+  },
+  "tls": {
+    "enabled": false,
+    "certificate": "cert.cert",
+    "key": "key"
+  },
+  "workers": {
+    "max_concurrent": 10,
+    "transfer_cleaning_period": 120,
+    "transfer_max_age":240
+  },
+  "fasp_management": {
+    "promiscuous_mode_enabled": true,
+    "port": 23456
+  },
+  "fasp_runtime": {
+    "use_embedded": true,
+    "log": {
+      "dir":".",
+      "level": 0
+    },
+    "user_defined": {
+      "bin":"path to ascp(4)",
+      "etc":"path to license and aspera.conf"
+    }
+  }
+}

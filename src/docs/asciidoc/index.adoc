@@ -3,3 +3,40 @@ Jorge Aguilera <jorge@incsteps.com>
 :toc: left
 :imagesdir: images
 
+== NCBI Example
+
+.nextflow.config
+[source]
+----
+plugins {
+    id "nf-aspera@0.0.1"
+}
+
+aspera{
+    clients {
+        ncbi {
+            remote_host = 'ftp.ncbi.nlm.nih.gov'
+            ssh_port = 22
+            remote_user = "anonftp"
+            ssh_private_key_path = "ncbi/aspera_tokenauth_id_rsa"
+            ssh_private_key_passphrase = "743128bf-3bf3-45b5-ab14-4602c67f2950"
+            cipher = "none"
+        }
+    }
+}
+----
+
+.test.nf
+[source]
+----
+workflow{
+    Channel.withAspera([
+        client: 'ncbi',
+        destination:'downloads/',
+        sources:[
+            '/refseq/release/bacteria/bacteria.1.2.genomic.fna.gz',
+        ]
+    ])
+    | view
+}
+----

@@ -22,9 +22,8 @@ import nextflow.Session
 import nextflow.trace.TraceObserver
 
 /**
- * Example workflow events observer
  *
- * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
+ * @author Jorge Aguilera <jorge@incsteps.com>
  */
 @Slf4j
 @CompileStatic
