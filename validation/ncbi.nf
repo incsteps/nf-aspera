@@ -65,6 +65,7 @@ workflow{
         client: 'ncbi',
         destination:'downloads/',
         sources:[
+            '/refseq/release/bacteria/bacteria.1.1.genomic.fna.gz',
             '/refseq/release/bacteria/bacteria.1.2.genomic.fna.gz',
         ]
     ])

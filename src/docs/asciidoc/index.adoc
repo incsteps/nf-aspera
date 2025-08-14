@@ -3,7 +3,51 @@ Jorge Aguilera <jorge@incsteps.com>
 :toc: left
 :imagesdir: images
 
+== Configuration
+
+The plugin needs a "named" client configuration where specify the credentials, etc
+to connect to the remote server.
+
+INFO:: You can provide multiple configurations in case you work with different servers
+
+.nextflow.config
+[source]
+----
+aspera{
+    clients {
+        asperasoft {
+            remote_host = 'demo.asperasoft.com'
+            ssh_port = 33001
+            remote_user= "aspera"
+            remote_password= "demoaspera"
+        }
+        ncbi {
+            ....
+        }
+}
+----
+
+== withAspera
+
+The plugin provides a `function` to download files:
+
+[source]
+----
+Channel.withAspera([
+    client: 'asperasoft',
+    destination:'downloads/',
+    sources:[
+        'aspera-test-dir-large/100MB',
+    ]
+])
+----
+
+the `function` will emit an event per each file downloaded
+
 == NCBI Example
+
+NCBI uses a published private key (aspera_tokenauth_id_rsa) and
+their passphrase (743128bf-3bf3-45b5-ab14-4602c67f2950)
 
 .nextflow.config
 [source]
