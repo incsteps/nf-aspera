@@ -5,7 +5,7 @@ Jorge Aguilera <jorge@incsteps.com>
 
 == Install
 
-add the plugin into your `.nextflow.config`
+To install the plugin, simply add the plugin into your `nextflow.config`
 
 .nextflow.config
 [source]
@@ -17,7 +17,7 @@ plugins {
 
 == FileSystem
 
-Once the plugin starts, a new `aspera` schema is added to Nextflow similar to `http` or `ftp`
+Once the plugin starts, a new `aspera` resource schema is added to Nextflow similar to `http` or `ftp`
 
 For example, running this pipeline you can grab the README file from NCBI:
 
@@ -35,9 +35,9 @@ The file created is a Stream byte array so no temporary files are required
 
 WARNING:: Similar to the `http` fileSystem, `aspera` doesn't provide some capabilities as upload, create dir, etc
 
-== ascp function
+== `ascp` operator
 
-The plugin provides a `function` to download files similar to the `ascp` native command:
+For users, who wish to use this plugin in channels, the plugin provides an `operator` to download files similar to the `ascp` native command:
 
 [source]
 ----
@@ -58,9 +58,9 @@ In case you want to download a bunch of files you can use `sources` instead of `
     ]
 ----
 
-the `function` will emit an event per each file downloaded
+The `ascp` operator will emit an event per each file downloaded
 
-== Demo Aspera
+== Aspera demo
 
 The plugin includes, out of the box, a `demo` client configuration to allow works with the `demo.asperasoft.com`
 server with the following configuration:
@@ -85,7 +85,7 @@ println "Download tooks ${endTime-startTime} ms"
 ----
 
 
-== NCBI
+== In-built NCBI Aspera client
 
 The plugin includes, out of the box, a `ncbi` client configuration to allow works with the `ftp.ncbi.nlm.nih.gov`
 server with the following configuration:
@@ -100,10 +100,9 @@ ssh_private_key_passphrase : "743128bf-3bf3-45b5-ab14-4602c67f2950",
 cipher : "none",
 ----
 
-INFO:: NCBI uses a published private key (aspera_tokenauth_id_rsa) and a published passphrase (743128bf-3bf3-45b5-ab14-4602c67f2950)
-to allow people anonymous downloads
+INFO:: NCBI uses a published private key (aspera_tokenauth_id_rsa) and a published passphrase (743128bf-3bf3-45b5-ab14-4602c67f2950) to allow people anonymous downloads
 
-Also the plugin provides with a `ncbi_ascp` function as a wrapper for the `ascp` function using `ncbi` as client
+Also the plugin provides with a `ncbi_ascp` operator as a wrapper for the `ascp` function using `ncbi` as client
 
 [source]
 ----
@@ -136,5 +135,8 @@ aspera{
 <1> my-company will be the identifier to use in the transfer urls
 <2> You can provide multiple configurations in case you work with different servers
 
-WARNING:: This feature will be available in the Enterprise plugin version. If your Aspera server is an OpenData
-instance, please contact us to include it in the community version
+
+== Feature Requests and plugin support for custom Aspera clients.
+
+This feature will be available in the Enterprise plugin version. If your Aspera server is an OpenData
+instance, please contact us at jorge@incsteps.com to include it in the community version
