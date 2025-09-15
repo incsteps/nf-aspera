@@ -1,0 +1,140 @@
+= nf-aspera
+Jorge Aguilera <jorge@incsteps.com>
+:toc: left
+:imagesdir: images
+
+== Install
+
+add the plugin into your `.nextflow.config`
+
+.nextflow.config
+[source]
+----
+plugins {
+    id "nf-aspera@0.1.0-edge1"
+}
+----
+
+== FileSystem
+
+Once the plugin starts, a new `aspera` schema is added to Nextflow similar to `http` or `ftp`
+
+For example, running this pipeline you can grab the README file from NCBI:
+
+.readme_ncbi.nf
+[source]
+----
+println file('aspera://ncbi/refseq/README').text
+----
+
+- "aspera" is the schema
+- "ncbi" is the identifier of the client (if you're running the enterprise version can be `my-company` for example)
+- '/refseq/README' is the URL of the remote file
+
+The file created is a Stream byte array so no temporary files are required
+
+WARNING:: Similar to the `http` fileSystem, `aspera` doesn't provide some capabilities as upload, create dir, etc
+
+== ascp function
+
+The plugin provides a `function` to download files similar to the `ascp` native command:
+
+[source]
+----
+Channel.ascp([
+    client: 'demo',
+    destination:'downloads/',
+    source: 'aspera-test-dir-small/10MB.1'
+])
+----
+
+In case you want to download a bunch of files you can use `sources` instead of `source`
+
+[source]
+----
+    sources:[
+        'aspera-test-dir-small/10MB.1',
+        'aspera-test-dir-large/100MB',
+    ]
+----
+
+the `function` will emit an event per each file downloaded
+
+== Demo Aspera
+
+The plugin includes, out of the box, a `demo` client configuration to allow works with the `demo.asperasoft.com`
+server with the following configuration:
+
+[source]
+----
+remote_host: "demo.asperasoft.com"
+ssh_port: 33001
+remote_user: "aspera"
+remote_password: "demoaspera"
+----
+
+This allows you to try the plugin installation easily running for example a simple pipeline as:
+
+[source]
+----
+long startTime = System.currentTimeMillis()
+println "10MB.1 size in bytes = " + file('aspera://demo/aspera-test-dir-small/10MB.1').bytes.length
+long endTime = System.currentTimeMillis()
+
+println "Download tooks ${endTime-startTime} ms"
+----
+
+
+== NCBI
+
+The plugin includes, out of the box, a `ncbi` client configuration to allow works with the `ftp.ncbi.nlm.nih.gov`
+server with the following configuration:
+
+[source]
+----
+remote_host : 'ftp.ncbi.nlm.nih.gov',
+ssh_port : 22,
+remote_user : "anonftp",
+ssh_private_key: 'BEGIN PRIVATE ------- ....',
+ssh_private_key_passphrase : "743128bf-3bf3-45b5-ab14-4602c67f2950",
+cipher : "none",
+----
+
+INFO:: NCBI uses a published private key (aspera_tokenauth_id_rsa) and a published passphrase (743128bf-3bf3-45b5-ab14-4602c67f2950)
+to allow people anonymous downloads
+
+Also the plugin provides with a `ncbi_ascp` function as a wrapper for the `ascp` function using `ncbi` as client
+
+[source]
+----
+Channel
+    .ncbi_ascp( destination:'downloads/', source: '/refseq/release/bacteria/bacteria.1.1.genomic.fna.gz' )
+    | view
+----
+
+
+== Private Servers
+
+In case you want to use another Aspera server you need to provide the connection details in the `aspera` configuration.
+
+.nextflow.config
+[source]
+----
+aspera{
+    clients {
+        my-company { //<1>
+            remote_host = 'our-aspera-server'
+            ssh_port = 33001
+            remote_user= "aspera"
+            remote_password= "a_secret_password"
+        }
+
+        another-server{ //<2>
+        }
+}
+----
+<1> my-company will be the identifier to use in the transfer urls
+<2> You can provide multiple configurations in case you work with different servers
+
+WARNING:: This feature will be available in the Enterprise plugin version. If your Aspera server is an OpenData
+instance, please contact us to include it in the community version

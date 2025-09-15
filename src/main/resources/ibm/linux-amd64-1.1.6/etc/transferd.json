@@ -1,0 +1,14 @@
+{
+  "address": "127.0.0.1",
+  "port": 55002,
+  "workers": {
+    "max_concurrent": 10
+  },
+  "fasp_management": {
+    "promiscuous_mode_enabled": false,
+    "port": 23456
+  },
+  "fasp_runtime": {
+    "use_embedded": true
+  }
+}
