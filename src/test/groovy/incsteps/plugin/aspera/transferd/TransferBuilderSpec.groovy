@@ -20,7 +20,8 @@ class TransferBuilderSpec extends Specification{
         
     },
     "file_system": {
-        "overwrite": "always"
+        "create_dir": true,
+        "overwrite": "diff"
     },
     "transport": {
         

@@ -51,7 +51,7 @@ class TransferdMonitorSpec extends Specification{
         new File("/tmp/10MB.2").exists()
     }
 
-    void "should stream an example from demoaspera"(){
+    void "should stream an example from ncbi"(){
         given:
         def obj = TransferdMonitor.instance
 

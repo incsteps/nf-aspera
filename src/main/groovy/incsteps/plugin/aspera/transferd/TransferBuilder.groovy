@@ -28,7 +28,7 @@ class TransferBuilder {
         def ret = [:]
         ret.session_initiation = buildInitiation(client)
         ret.security = buildSecurity(client)
-        ret.file_system = buildFileSystem(client)
+        ret.file_system = buildFileSystem(client, destination)
         ret.transport = buildTransport(client)
         ret.assets = buildAssets(client, destination, sources)
 
@@ -67,10 +67,14 @@ class TransferBuilder {
         ret
     }
 
-    static private Map<String,Object> buildFileSystem(ClientConfig client){
+    static private Map<String,Object> buildFileSystem(ClientConfig client, String destination){
         def ret = [:]
-        ret.create_dir = true
-        ret.overwrite = "diff"
+        if( destination ) {
+            ret.create_dir = true
+            ret.overwrite = "diff"
+        }else {
+            ret.overwrite = "always"
+        }
         ret
     }
 
