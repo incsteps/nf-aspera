@@ -1,4 +1,4 @@
-name: nf-aspera
+name: build
 on:
   push:
     branches:
