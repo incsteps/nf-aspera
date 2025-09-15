@@ -64,7 +64,7 @@ sourceSets {
 nextflowPlugin {
     nextflowVersion = "${nextflowVersion}"
 
-    provider = 'incsteps'
+    provider = " Incremental Steps"
     className = 'incsteps.plugin.NfAsperaPlugin'
     extensionPoints = [
         'incsteps.plugin.NfAsperaExtension',
