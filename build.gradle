@@ -64,6 +64,7 @@ sourceSets {
 nextflowPlugin {
     nextflowVersion = "${nextflowVersion}"
 
+    description = 'A plugin to use IBM aspera protocol in pipelines'
     provider = " Incremental Steps"
     className = 'incsteps.plugin.NfAsperaPlugin'
     extensionPoints = [
