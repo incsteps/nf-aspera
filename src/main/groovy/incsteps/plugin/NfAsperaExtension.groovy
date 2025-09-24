@@ -69,6 +69,14 @@ class NfAsperaExtension extends PluginExtensionPoint {
         return target
     }
 
+    @Factory
+    DataflowWriteChannel ena_ascp(Map params=[:]) {
+        final target = CH.create()
+        params.client = 'ena'
+        session.addIgniter((action) -> downloadFile(target, params))
+        return target
+    }
+
     private void downloadFile(DataflowWriteChannel target, Map params) {
 
         validate(params)
