@@ -100,9 +100,9 @@ ssh_private_key_passphrase : "743128bf-3bf3-45b5-ab14-4602c67f2950",
 cipher : "none",
 ----
 
-INFO:: NCBI uses a published private key (aspera_tokenauth_id_rsa) and a published passphrase (743128bf-3bf3-45b5-ab14-4602c67f2950) to allow people anonymous downloads
+INFO:: NCBI uses a published private key (aspera_tokenauth_id_rsa) and a published passphrase (743128bf-3bf3-45b5-ab14-4602c67f2950) to allow anonymous people download files
 
-Also the plugin provides with a `ncbi_ascp` operator as a wrapper for the `ascp` function using `ncbi` as client
+Also the plugin provides with a `ncbi_ascp` Factory as a wrapper for the `ascp` function using `ncbi` as client
 
 [source]
 ----
@@ -111,10 +111,34 @@ Channel
     | view
 ----
 
+== In-built ENA Aspera client
+
+The plugin includes, out of the box, an `ena` client configuration to allow works with the `fasp.ebi.ac.uk`
+server with the following configuration:
+
+[source]
+----
+remote_host : 'fasp.ebi.ac.uk',
+ssh_port : 33001,
+remote_user : "fasp-public",
+ssh_private_key: 'BEGIN PRIVATE ------- ....'
+----
+
+INFO:: ENA uses a published private key (asperaweb_id_dsa.openssh) to allow anonymous people download files
+
+Also the plugin provides with a `ena_ascp` Factory as a wrapper for the `ascp` function using `ena` as client
+
+[source]
+----
+Channel
+    .ena_ascp( destination:'downloads/', source: 'vol1/fastq/ERR164/ERR164407/ERR164407.fastq.gz' )
+    | view
+----
+
 
 == Private Servers
 
-In case you want to use another Aspera server you need to provide the connection details in the `aspera` configuration.
+In case you want to use some corporate Aspera server you need to provide the connection details in the `aspera` configuration.
 
 .nextflow.config
 [source]
@@ -135,8 +159,6 @@ aspera{
 <1> my-company will be the identifier to use in the transfer urls
 <2> You can provide multiple configurations in case you work with different servers
 
+INFO:: This feature will be available in the Enterprise plugin version.
 
-== Feature Requests and plugin support for custom Aspera clients.
-
-This feature will be available in the Enterprise plugin version. If your Aspera server is an OpenData
-instance, please contact us at jorge@incsteps.com to include it in the community version
+If you want to include more **OpenData** Aspera servers, please contact us at jorge@incsteps.com to include it in the community version
