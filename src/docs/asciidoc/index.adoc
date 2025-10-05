@@ -8,10 +8,10 @@ Jorge Aguilera <jorge@incsteps.com>
 To install the plugin, simply add the plugin into your `nextflow.config`
 
 .nextflow.config
-[source]
+[source,subs="attributes"]
 ----
 plugins {
-    id "nf-aspera@0.1.0-edge1"
+    id "nf-aspera@{version}"
 }
 ----
 

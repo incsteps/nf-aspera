@@ -26,6 +26,8 @@ asciidoctor{
 
         into './images'
     }
+
+    attributes 'version':version
 }
 
 protobuf {
