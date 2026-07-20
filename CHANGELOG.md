@@ -1,10 +1,12 @@
-## [0.1.0-edge2]
+## [0.1.0-edge3]
 
 ### 🚀 Features
 
 - Upgrade to nextflow 26.04.3
 - Add nf-test for e2e tests
 - Use cliff for changelog
+
+## [0.1.0-edge2]
 
 ### 💼 Other
 
@@ -26,6 +28,7 @@ Signed-off-by: jorge aguilera <jorge@incsteps.com>
 - Add version into documentation
 
 Signed-off-by: jorge aguilera <jorge@incsteps.com>
+
 ## [0.1.0-edge1] - 2025-09-15
 
 ### 🐛 Bug Fixes
