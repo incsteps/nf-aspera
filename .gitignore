@@ -18,3 +18,5 @@ build
 /validation/.nextflow.log
 /validation/.nextflow.log.*
 /validation/downloads/*
+/src/e2e/workflows/downloads/
+/src/e2e/.nf-test.log
