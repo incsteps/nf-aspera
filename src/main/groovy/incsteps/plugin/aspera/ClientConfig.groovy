@@ -53,12 +53,14 @@ class ClientConfig {
     }
 
     static ClientConfig ena(){
-        def privateKey = ClientConfig.getResourceAsStream("/auth/asperaweb_id_dsa.openssh").text
+        def privateKey = ClientConfig.getResourceAsStream("/auth/aspera_tokenauth_id_rsa").text
         return fromMap([
                 remote_host : 'fasp.ebi.ac.uk',
                 ssh_port : 33001,
                 remote_user : "fasp-public",
-                ssh_private_key: privateKey
+                ssh_private_key: privateKey,
+                ssh_private_key_passphrase : "743128bf-3bf3-45b5-ab14-4602c67f2950",
+                cipher : "none",
         ])
     }
 
