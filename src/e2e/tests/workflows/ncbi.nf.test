@@ -1,7 +1,7 @@
 nextflow_pipeline {
 
-    name "Test Workflow hello.nf"
-    script "workflows/hello.nf"
+    name "Test ncbi_ascp"
+    script "workflows/ncbi.nf"
 
     test("Should run without failures") {
 

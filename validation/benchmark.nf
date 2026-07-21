@@ -1,25 +1,21 @@
-// Read a file from NCBI remote host
+nextflow.enable.dsl=2
 
-params.test = 'http'
-params.resource = '/refseq/release/bacteria/bacteria.1029.genomic.gbff.gz'
+params.resource = 'refseq/release/bacteria/bacteria.1029.genomic.gbff.gz'
 
-println "Downloading $params.resource using $params.test method"
+workflow {
+    methods_ch = Channel.of(
+        ['aspera', "aspera://ncbi/${params.resource}"],
+        ['http',   "http://ftp.ncbi.nlm.nih.gov/${params.resource}"],
+        ['ftp',    "ftp://ftp.ncbi.nlm.nih.gov/${params.resource}"],
+    )
 
-Map download(String url){
-    start = System.currentTimeMillis()
-    bytes = file(url).bytes.length
-    end = System.currentTimeMillis()
-    return [start:start, bytes: bytes, end: end]
+    files_ch = methods_ch.map { method, url ->
+        def start = System.currentTimeMillis()
+        def bytes = file(url).bytes.length
+        def end = System.currentTimeMillis()
+        """
+        $method took ${(end-start)/1000} seconds to read $bytes bytes
+        """
+    } | view
+
 }
-
-result = switch( params.test ){
-   case 'ftp' -> download("ftp://ftp.ncbi.nlm.nih.gov/$params.resource")
-   case 'http' -> download("http://ftp.ncbi.nlm.nih.gov/$params.resource")
-   case 'aspera' -> download("aspera://ncbi//$params.resource")
-   default-> throw new IllegalArgumentException("not valid")
-}
-
-println String.format("""
-%s tooks %04.02f seconds to read %d bytes
-""", params.test, (result.end-result.start)/1000 as float, result.bytes)
-
