@@ -25,11 +25,26 @@ import java.nio.file.Path
 @Singleton
 class Transferd {
 
-    static final String TRANSFERD_PATH =
+    static final String LINUX_AMD_TRANSFERD_PATH =
             "/ibm/linux-amd64-1.1.6/sbin/transferd"
 
+    static final String MACOS_TRANSFERD_PATH =
+            "/ibm/macos-1.1.6/sbin/transferd"
 
     static String getTransferdPath(){
+        String TRANSFERD_PATH = ""
+
+        switch(OSDetector.operatingSystem){
+            case OSDetector.OperatingSystem.LINUX:
+                TRANSFERD_PATH = LINUX_AMD_TRANSFERD_PATH
+                break
+            case OSDetector.OperatingSystem.MAC:
+                TRANSFERD_PATH = MACOS_TRANSFERD_PATH
+                break
+            //case OSDetector.OperatingSystem.WINDOWS: //TODO
+            default:
+                throw new RuntimeException("Operating System not supported")
+        }
         Path.of( Transferd.getResource(TRANSFERD_PATH).toURI()).toAbsolutePath().toString()
     }
 
@@ -39,7 +54,15 @@ class Transferd {
         transferd ? transferd.pid() : -1
     }
 
+    static void makeExecutable(){
+        def f = new File(transferdPath)
+        f.executable = true
+    }
+
     long launchDaemon(){
+
+        makeExecutable()
+
         def pb = new ProcessBuilder(transferdPath)
         pb.redirectErrorStream(true)
 
