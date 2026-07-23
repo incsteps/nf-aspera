@@ -1,8 +1,15 @@
 ## What's Changed
+* fix: mark as executable aspera bin files
+
+## What's Changed in 0.1.0-edge4
+* feat: improve release notes by @jagedn
+* feat: prepare 0.1.0-edge4 by @jagedn
 * feat: support for Mac OS by @jagedn
 * feat: improve tests using nf-test by @jagedn
 * refactor: use tokenauth in ENA by @jagedn
 * doc: improve README by @jagedn
+
+**Full Changelog**: https://github.com/incsteps/nf-aspera/compare/0.1.0-edge3...0.1.0-edge4
 
 ## What's Changed in 0.1.0-edge3
 * feat: prepare 0.1.0-edge3 by @jagedn
