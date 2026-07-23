@@ -25,38 +25,54 @@ import java.nio.file.Path
 @Singleton
 class Transferd {
 
-    static final String LINUX_AMD_TRANSFERD_PATH =
-            "/ibm/linux-amd64-1.1.6/sbin/transferd"
+    static final String LINUX_AMD_PATH =
+            "/ibm/linux-amd64-1.1.6"
 
-    static final String MACOS_TRANSFERD_PATH =
-            "/ibm/macos-1.1.6/sbin/transferd"
+    static final String MACOS_PATH =
+            "/ibm/macos-1.1.6"
 
-    static String getTransferdPath(){
-        String TRANSFERD_PATH = ""
-
+    static String getAsperaPath(){
         switch(OSDetector.operatingSystem){
             case OSDetector.OperatingSystem.LINUX:
-                TRANSFERD_PATH = LINUX_AMD_TRANSFERD_PATH
+                return LINUX_AMD_PATH
                 break
             case OSDetector.OperatingSystem.MAC:
-                TRANSFERD_PATH = MACOS_TRANSFERD_PATH
+                return MACOS_PATH
                 break
             //case OSDetector.OperatingSystem.WINDOWS: //TODO
             default:
                 throw new RuntimeException("Operating System not supported")
         }
-        Path.of( Transferd.getResource(TRANSFERD_PATH).toURI()).toAbsolutePath().toString()
     }
+
+    static String getTransferdBin(){
+        "sbin/transferd"
+    }
+
+    static String getTransferdPath(){
+        Path.of( Transferd.getResource("$asperaPath/$transferdBin").toURI()).toAbsolutePath().toString()
+    }
+
+    static void makeExecutableDir(String path){
+        def bin = new File(path)
+        if( bin.exists() && bin.isDirectory() ){
+            bin.traverse {
+                it.executable = true
+            }
+        }
+    }
+
+    static void makeExecutable(){
+        makeExecutableDir( Path.of(Transferd.getResource("$asperaPath/bin").toURI()).toAbsolutePath().toString() )
+        makeExecutableDir( Path.of(Transferd.getResource("$asperaPath/lib").toURI()).toAbsolutePath().toString() )
+        makeExecutableDir( Path.of(Transferd.getResource("$asperaPath/sbin").toURI()).toAbsolutePath().toString() )
+    }
+
 
     private Process transferd
 
     long pidProcess(){
         transferd ? transferd.pid() : -1
-    }
-
-    static void makeExecutable(){
-        def f = new File(transferdPath)
-        f.executable = true
     }
 
     long launchDaemon(){
